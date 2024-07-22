@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<title>Settings</title>
+{% endblock %}
+
+{% block body %}
+<div class="settings-container">
+    <h1 class="mb-5 settingFont">SETTINGS</h1>
+
+    <h5 class="section-title mb-1">Account Settings</h5>
+    <div class="section-box mb-5">
+        <ul class="list-unstyled">
+            <li class="mb-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>Logged in as: <strong>{{ session['username'] }}</strong></span>
+                    <a href="{{ url_for('logout') }}" class="btn btn-secondary btn-sm">LOG OUT</a>
+                </div>
+            </li>
+            <li class="mb-4 d-flex justify-content-between align-items-center">
+                <span>Two-Step Verification</span>
+                <div class="form-check form-switch mt-2">
+                    <input class="form-check-input" type="checkbox" id="twoStepVerification">
+                    <label class="form-check-label" for="twoStepVerification"></label>
+                </div>
+            </li>
+            <li class="mb-4 d-flex justify-content-between align-items-center">
+                <span>Add Family Account</span>
+                <div>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="showFamilyAccountInput()">ADD</button>
+                </div>
+            </li>
+            <li id="familyAccountInput" class="mb-4" style="display: none;">
+                <label for="familyEmail" class="visually-hidden">Enter family member's email</label>
+                <input type="email" id="familyEmail" class="form-control mb-2" placeholder="Enter family member's email" aria-label="Enter family member's email">
+                <button id="addFamilyAccountBtn" class="btn btn-primary" onclick="addFamilyAccount()">Send Request</button>
+            </li>
+        </ul>
+    </div>
+
+    <h4 class="section-title mb-3">Lock</h4>
+    <div class="section-box mb-5">
+        <ul class="list-unstyled">
+            <li>
+                <div class="d-flex justify-content-start align-items-center lock-container">
+                    <span class="lock-label">Lock for:</span>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="lockSwitch" onchange="toggleSlider()">
+                    </div>
+                    <input type="range" min="0" max="6" value="0" class="slider" id="lockRange" oninput="updateRangeLabel()" disabled>
+                    <span id="lockRangeLabel">0 minutes</span>
+                    <button id="toggleLockBtn" class="btn btn-secondary btn-sm" onclick="confirmLock()" disabled>LOCK ACCOUNT</button>
+                </div>
+
+                <div id="unlockForm" style="display: none;">
+                    <input type="password" id="masterPasswordInput" placeholder="Enter Master Password" class="form-control input-short mb-2">
+                    <button class="btn btn-primary btn-sm" onclick="unlockAccount()">UNLOCK</button>
+                    <button type="button" id="toggleLockVisibilityBtn" class="btn btn-outline-secondary btn-sm" onclick="toggleLockPasswordVisibility()">
+                        <i id="toggleLockVisibilityIcon" class="bi bi-eye-slash" style="color: white"></i>
+                    </button>
+                </div>
+            </li>
+        </ul>
+    </div>
+
+    {% for message in get_flashed_messages(category_filter=["error", "success"]) %}
+        <div class="alert alert-{{ 'danger' if 'error' in message else 'success' }} alert-dismissible">
+            {{ message }}
+        </div>
+    {% endfor %}
+
+    <h4 class="section-title mb-1">Reset/Delete</h4>
+    <div class="section-box mb-5">
+        <ul class="list-unstyled">
+            <li class="d-flex justify-content-between align-items-center">
+                Reset Password
+                <a href="{{ url_for('resetPassword') }}" class="btn btn-warning mb-4">RESET</a>
+            </li>
+            <li class="d-flex justify-content-between align-items-center">
+                Reset Animal ID
+                <a href="{{ url_for('animal_id') }}" class="btn btn-warning mb-4">RESET</a>
+            </li>
+            <li class="d-flex justify-content-between align-items-center">
+                Reset Master Password
+                <a href="{{ url_for('master_password') }}" class="btn btn-warning mb-4">RESET</a>
+            </li>
+            <li class="d-flex justify-content-between align-items-center">
+                Delete MasterVault Account
+                <button type="button" id="deleteAccountBtn" class="btn btn-danger" onclick="deleteAccount()">DELETE</button>
+            </li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
+

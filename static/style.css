@@ -1,0 +1,581 @@
+/* base */
+.logo-bar {
+    padding: 23px;
+    text-align: left;
+    border-bottom: 2px solid #173356;
+}
+
+html{
+  margin:0;
+  padding:0;
+ min-height: 100%;
+}
+
+
+body {
+  background: rgba(1, 1, 1, 0);
+ min-height: 100%;
+}
+
+.baseLogo {
+    max-width: 330px;
+    height: auto;
+}
+
+.logo-bar {
+    padding: 23px;
+    text-align: left;
+    border-bottom: 2px solid #173356;
+    position: relative;
+}
+
+.logout-icon {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.5em;
+    color: #000;
+    text-decoration: none;
+}
+
+.logout-icon:hover {
+    color: #173356;
+}
+
+.main-container {
+    display: flex;
+    height: 100vh;
+}
+
+
+.nav-drawer {
+    flex-shrink: 0;
+    width: 280px;
+    height: auto;
+    background-color: white;
+    padding-top: 20px;
+    border-bottom: 2px solid #173356;
+    border-right: 2px solid #173356;
+    position: relative;
+    border-radius: 10px;
+    box-shadow: 10px 0px 0px 0px #738499;
+}
+
+.navFont {
+font-family: "Montserrat", sans-serif;
+font-weight: bold;
+color: #173356;
+}
+
+
+.user-info {
+    padding: 0 15px;
+    margin-bottom: 60px;
+}
+
+.welcome-message {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.email-message {
+    font-size: 0.9em;
+    color: #555;
+}
+
+.nav-drawer ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.nav-drawer li {
+    margin-bottom: 10px;
+}
+
+.nav-drawer a {
+    padding: 20px 15px;
+    text-decoration: none;
+    font-size: 20px;
+    color: black;
+    display: block;
+    white-space: nowrap;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+}
+
+.nav-drawer a:hover {
+    color: white;
+    background-color: #8b99aa;
+}
+
+
+/*login page*/
+#loginLogo {
+    width: 230px;
+    height: auto;
+}
+
+.flash-messages-container {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1050;
+    width: auto;
+    max-width: 100%;
+}
+
+.alert-dismissible {
+    opacity: 1;
+    transition: opacity 0.5s ease-in-out;
+}
+
+
+.fade-out {
+    opacity: 0 !important;
+}
+
+
+.LoginTitleFont {
+font-family: Inter, sans-serif;
+    font-weight: bold;
+    color: #173356;
+}
+
+.login-container {
+    padding-top: 100px;
+}
+
+.registerPasswordlink {
+    color: #0d6efd;
+    font-size: 15px;
+}
+
+.registerPasswordlink:hover {
+    color: #0a58ca;
+}
+
+
+.forgotPasswordlink {
+    color: #0d6efd;
+    font-size: 15px;
+    text-decoration-line: underline;
+}
+
+.forgotPasswordlink:hover {
+    color: #0d6efd;
+}
+
+
+.loginButton {
+    background-color: #173356;
+    border-color: #173356;
+}
+
+.loginButton:hover{
+    background-color: #4c8cdb;
+    border-color: #4c8cdb;
+}
+
+/*Register Page */
+#registerLogo {
+width: 220px;
+height: auto;
+}
+.registerButton {
+  background-color: #173356;
+  border-color: #173356;
+}
+
+.registerButton:hover {
+    background-color: #4c8cdb;
+    border-color: #4c8cdb;
+}
+
+.titleFontregister {
+    font-family: Inter, sans-serif;
+    font-weight: bold;
+    color: #173356;
+}
+
+/*Master Password*/
+#masterPasswordLogo {
+width: 230px;
+height: auto;
+}
+
+.masterPasswordButton {
+background-color: #173356;
+  border-color: #173356;
+}
+
+.masterPasswordButton:hover {
+background-color: #4c8cdb;
+    border-color: #4c8cdb;
+}
+
+#passwordMatchMessage {
+    font-size: 13px;
+}
+
+/*Settings*/
+.settings-container {
+    padding-left: 350px;
+    margin-top: -750px;
+}
+
+
+.section-box {
+    border: 2px solid #173356;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 5px;
+    width: 1050px;  /* Optional: to ensure the box doesn't get too wide on large screens */
+    background-color: #f8f8f8;
+}
+
+.section-title {
+    margin-bottom: 5px;
+}
+
+/* Remove bullet points from the list */
+.list-unstyled {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+.btn-sm {
+    background-color: #173356;
+    border-color: #173356;
+    width: 100px;
+    text-align: center;
+    line-height: 25px;
+}
+
+.btn-sm:hover {
+background-color: #4c8cdb;
+    border-color: #4c8cdb;
+}
+
+
+.form-check-input {
+    width: 30px;
+    height: 18px;
+    text-align: center;
+}
+
+
+.form-check-input::after {
+    width: 30px;
+    height: 18px;
+    background-color: #173356;
+    border-radius: 50%;
+    transition: transform .3s;
+    transform: translateX(0);
+}
+
+.form-check-input:checked {
+    background-color: #4caf50;
+}
+
+.form-check-input:checked + .form-check-input::after {
+    transform: translateX(1em);
+}
+
+input[type=range] {
+    width: 400px;
+    margin-left: 300px;
+}
+
+.settingFont {
+ font-family: Inter, sans-serif;
+    font-weight: bold;
+    color: #173356
+}
+
+.section-title {
+font-family: Inter, sans-serif;
+    color: #173356
+}
+
+
+
+#countdownTimer {
+    margin-top: 10px;
+    color: red;
+    font-weight: bold;
+}
+
+.lock-container {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 20px; /* Adjusts space between items */
+    padding-right: 15px;
+}
+
+.lock-label {
+    margin-right: 10px;
+    white-space: nowrap; /* Prevent the text from wrapping */
+}
+
+#lockRange {
+    width: 300px;
+}
+
+#lockRangeLabel {
+    margin-right: 50px;
+    white-space: nowrap;
+    font-weight: bold;
+}
+
+#toggleLockBtn {
+    padding: 0.375rem 0.75rem;
+    white-space: nowrap; /* Keep the text on a single line */
+    width: auto;
+    min-width: 150px;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.unlock-form {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.input-short {
+    width: auto;
+    flex-grow: 1;
+    max-width: 250px;
+}
+
+.disabled-feature {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+
+.btn-warning, .btn-danger {
+    background-color: #173356;
+    border-color: #173356;
+    color: white;
+    width: 100px;
+    text-align: center;
+}
+
+/*Password Generator*/
+.password-container {
+ padding-left: 350px;
+    margin-top: -750px;
+}
+
+.passwordGeneratortitleFont {
+font-family: Inter, sans-serif;
+    color: #173356;
+    font-weight: bold;
+}
+
+.refreshButton {
+ background-color: #173356;
+    border-color: #173356;
+}
+
+.refreshButton:hover {
+ background-color: #4c8cdb;
+    border-color: #4c8cdb;
+}
+
+.clipboardButton {
+background-color: #173356;
+    border-color: #173356;
+}
+
+.clipboardButton:hover {
+ background-color: #4c8cdb;
+    border-color: #4c8cdb;
+}
+
+.generatePasswordbutton {
+background-color: #173356;
+    border-color: #173356;
+}
+
+.generatePasswordbutton:hover {
+ background-color: #4c8cdb;
+    border-color: #4c8cdb;
+}
+
+/*PasswordView*/
+.passwordList {
+    margin-left: 300px; /* Space for sidebar */
+    margin-top: -760px; /* Adjust this to bring the .passwordList to the top */
+}
+
+
+
+.icon-button {
+    background-color: #173356;
+    border: none;
+    color: #FFFFFF;
+    margin: 0.25rem;
+    border-radius: 0.25rem;
+    padding: 8px; /* Adjust padding for icon size */
+  }
+
+.icon-button:hover {
+    background-color: #4c8cdb;
+  }
+
+.table, .table th, .table td {
+    background-color: transparent !important;
+    max-height: fit-content;
+  }
+
+.addPasswordButtonList {
+    background-color: transparent;
+    border-color: transparent;
+    color: #173356;
+    font-size: 3rem;
+    margin-top: 100px;
+}
+
+.passwordViewGenerator {
+    max-width: 500px;
+    margin-left: 850px;
+    margin-top: -380px;
+}
+
+/*AboutUs*/
+
+.aboutUs-container {
+    padding-left: 350px;
+    margin-top: -750px;
+}
+
+.aboutUsFont {
+    font-family: Azeret Mono, monospace;
+    font-weight: bold;
+    color: #173356;
+}
+
+.aboutUsParagraph {
+    font-family: Recursive, sans-serif;
+    font-size: 11pt;
+}
+
+.img-fluid {
+    max-width: 100%;
+    height: auto;
+    max-height: 500px;
+    float: right;
+    padding-right: -300px;
+}
+
+/*Choose Animal ID */
+.chooseAnimalFont {
+    font-family: Azeret Mono, monospace;
+    color: #173356;
+}
+
+.animal-img {
+    width: 300px;
+    height: auto;
+    margin-left: 10px;
+}
+
+.animalFont {
+    font-family: Recursive, sans-serif;
+    font-size: 11pt;
+    font-weight: bold;
+    margin-left: 20px;
+}
+
+.peacock {
+    padding-left: 100px;
+}
+
+.chicken {
+    padding-top: 80px;
+}
+
+.monkey {
+    padding-left: 100px;
+}
+
+.dog {
+    padding-top: 80px;
+}
+
+.dog-img {
+    width: 300px;
+    height: auto;
+    margin-left: 45px;
+}
+
+.tiger {
+    padding-left: 100px;
+}
+
+.tiger-img {
+    width: 300px;
+    height: auto;
+    margin-left: 20px;
+}
+
+.confirmAnimalID {
+    background-color: #173356;
+    border-color: #173356;
+    color: white;
+}
+
+.confirmAnimalID:hover {
+    background-color: #4c8cdb;
+    border-color: #4c8cdb;
+    color: white;
+}
+
+.animalIDButton {
+    justify-content: right;
+    display: flex;
+    padding-top: 80px;
+    padding-right: 50px;
+    padding-bottom: 50px;
+}
+
+
+
+/*Animal ID Verification*/
+#AnimalIDPageLogo {
+    width: 230px;
+    height: auto;
+   margin-top: 80px;
+}
+
+.securityPicture {
+width: 300px;
+    height: auto;
+}
+
+.addPasswordButton {
+ background-color: #173356;
+    border-color: #173356;
+}
+
+.addPasswordButton:hover {
+    background-color: #4c8cdb;
+    border-color: #4c8cdb;
+}
+
+.short-input {
+    width: 75%;
+}
+
+
+
+.password-container .password-generator {
+    margin-top: 20px;
+    margin-left: 50px;
+}

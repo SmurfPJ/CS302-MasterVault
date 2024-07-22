@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block head %}
+<title>About Us</title>
+{% endblock %}
+
+{% block body %}
+<div class="aboutUs-container">
+            <h1 class="mb-7 mt-3 aboutUsFont">About Us</h1>
+</div>
+
+        <div class="col-lg-6 mx-auto">
+            <p class="mb-5 mt-5 aboutUsParagraph">
+                At MasterVault, we're dedicated to simplifying password management while ensuring top-notch security.
+                Our goal is to provide a user-friendly platform that enables you to safeguard your online accounts
+                effortlessly. Utilizing cutting-edge security measures, we prioritize the protection of your passwords
+                and sensitive information. With MasterVault, you can have peace of mind knowing that your digital assets
+                are safe and easily accessible whenever you need them.
+            </p>
+        </div>
+        <div class="col-10">
+            <img src="{{ url_for('static', filename='logos/aboutUs.png') }}" class="img-fluid" alt="Security Illustration">
+        </div>
+{% endblock %}
+
+

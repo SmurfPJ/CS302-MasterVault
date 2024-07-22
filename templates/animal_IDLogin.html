@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Animal ID Login</title>
+</head>
+
+<body class="d-flex align-items-center min-vh-80">
+    <div class="container position-relative">
+        <a href="{{ url_for('login') }}" class="btn btn-primary position-absolute top-0 start-0 mt-3 ms-3">BACK</a>
+        <div class="text-center mb-4">
+            <img src="{{ url_for('static', filename='logos/masterVaultloginLogo.png') }}" alt="Website Logo" class="mb-4" id="AnimalIDPageLogo">
+        </div>
+        <div class="row justify-content-center align-items-center">
+            <div class="col-md-3 text-center">
+                <img src="{{ url_for('static', filename='logos/' + selected_animal + '.jpeg') }}" alt="{{ selected_animal }}" class="img-fluid rounded mb-3 securityPicture">
+                <p>{{ selected_animal }}</p> <!-- Debugging output -->
+            </div>
+            <div class="col-md-4">
+                <p>Please do not enter your password if this picture is different from the one you have selected during registration.</p>
+                <form method="POST" action="">
+                    <div class="form-group mb-3">
+                        <input type="password" class="form-control" placeholder="Password" name="password" required>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input type="checkbox" class="form-check-input" id="securityCheck" name="securityCheck" onchange="toggleSecurityCheckButton()">
+                        <label class="form-check-label ms-2" for="securityCheck">Yes, this is my security picture</label>
+                    </div>
+                    <div class="form-group text-center">
+                        <button type="submit" class="btn btn-primary w-100" id="confirmButton" disabled>CONFIRM</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.10.2/dist/umd/popper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js"></script>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</html>
+
+
+
+
+
+
+
+

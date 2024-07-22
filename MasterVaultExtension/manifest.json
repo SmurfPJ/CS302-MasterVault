@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "MasterVault",
+  "version": "1.0",
+  "description": "A great & efficient way to save all your passwords.",
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "images/Logo16x16.png",
+      "48": "images/Logo48x48.png"
+    }
+  },
+  "icons": {
+    "16": "images/Logo16x16.png",
+    "48": "images/Logo48x48.png"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ],
+ "permissions": [
+    "activeTab",
+    "tabs",
+    "storage",
+    "notifications"
+],
+
+  "background": {
+    "service_worker": "background.js"
+},
+
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ]
+}
+
+

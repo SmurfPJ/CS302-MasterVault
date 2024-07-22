@@ -1,0 +1,22 @@
+.PopupExtension {
+    width: 300px;  /* Set a fixed width for the popup */
+    font-size: 0.9rem;
+}
+
+.LogoFont {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: bold;
+    color: #173356;
+    font-size: 20px;
+}
+
+.loginFont {
+    font-family: Inter, sans-serif;
+    font-weight: bold;
+    color: #173356;
+    font-size: 23px;
+}
+
+#loggedInAs {
+    font-size: 0.9em;
+}
