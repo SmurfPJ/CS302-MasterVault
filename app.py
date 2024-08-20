@@ -234,7 +234,7 @@ def login():
                     setSessionID(findPost['_id']) 
                     # print(session['id'])
                                     
-                    session['username'] = decrypt(findPost["username"])
+                    session['username'] = findPost["username"]
                     print("Decrypted session username: ", session.get('username'))
                     session['email'] = email
                     # session['_id'] = findPost['_id']
@@ -269,7 +269,7 @@ def animalIDVerification():
     findPost = userData.find_one({"_id": sessionID})
     available_animals = ['giraffe', 'dog', 'chicken', 'monkey', 'peacock', 'tiger']
 
-    selected_animal = decrypt(findPost['animalID'])
+    selected_animal = findPost['animalID']
     print("Decrypted animal ID: ", selected_animal)
     if selected_animal not in available_animals:
         selected_animal = random.choice(available_animals)
@@ -278,9 +278,9 @@ def animalIDVerification():
         password = request.form.get('password')
         security_check = request.form.get('securityCheck')
 
-        print("Decrypted password: ", decrypt(findPost['loginPassword']))
+        print("Decrypted password: ", findPost['loginPassword'])
 
-        if security_check and password == decrypt(findPost['loginPassword']):
+        if security_check and password == findPost['loginPassword']:
             if findPost['masterPassword'] == None:
                 return redirect(url_for('master_password'))
             else:
@@ -302,7 +302,7 @@ def animal_id():
         selected_animal = form.animal.data
         # user_email = findPost['email']  # Assuming you have the user's email stored in session
 
-        userData.update_one({"_id": sessionID}, {"$set": {"animalID": encrypt(selected_animal)}})
+        userData.update_one({"_id": sessionID}, {"$set": {"animalID": selected_animal}})
 
         return redirect(url_for('login'))
 
@@ -352,10 +352,10 @@ def register():
         idCounter = 1        
 
         post = {
-                    "username": encrypt(cform.username.data),
+                    "username": cform.username.data,
                     "email": cform.email.data,
                     "DOB": dobTime,
-                    "loginPassword": encrypt(cform.password.data),
+                    "loginPassword": cform.password.data,
                     "animalID": None,
                     "accountType": cform.account_type.data,
                     "masterPassword": None,
@@ -461,7 +461,8 @@ def master_password():
     if request.method == 'POST':
         master_password = request.form['master_password']
 
-        userData.update_one({"_id": sessionID}, {"$set": {"masterPassword": encrypt(master_password)}})
+        if master_password == request.form['confirmMaster_password']:
+            userData.update_one({"_id": sessionID}, {"$set": {"masterPassword": master_password}})
 
         # Flash a success message
         flash('Master password set up successfully!', 'success')
@@ -654,12 +655,21 @@ def updatePassword(name, new_data):
 
 @app.route('/resetPassword', methods=['GET', 'POST'])
 def resetPassword():
+    findPost = userData.find_one({"_id": sessionID})
+    lockedPost = findPost['accountLocked']
+
+    if lockedPost == "Locked":
+        flash(
+        'Your account is currently locked. You cannot reset the login password while the account is locked.',
+        'error')
+        return redirect(url_for('settings'))
+
     if request.method == 'POST':    
         newPassword = request.form['newPassword']
-        
-        userData.update_one({"_id": sessionID}, {"$set": {"loginPassword": newPassword}})
-        
-        return redirect(url_for('passwordList'))
+
+        if newPassword == request.form['confirmNewPassword']:
+            userData.update_one({"_id": sessionID}, {"$set": {"loginPassword": newPassword}})
+            return redirect(url_for('passwordList'))
 
     return render_template('resetPassword.html')
 
@@ -940,8 +950,8 @@ def unlock_account():
 
 def verify_and_unlock_account(sessionID, master_password):
     findPost = userData.find_one({'_id': sessionID})
-    print("Decrypted master password:", decrypt(findPost['masterPassword']))
-    if findPost and decrypt(findPost['masterPassword']) == master_password:
+    print("Decrypted master password:", findPost['masterPassword'])
+    if findPost and findPost['masterPassword'] == master_password:
         userData.update_one({'_id': sessionID}, {"$set": {"accountLocked": "Unlocked"}})
         return True
     return False
