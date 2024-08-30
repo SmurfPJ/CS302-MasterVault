@@ -507,6 +507,7 @@ def addPassword():
 
             additional_fields = {
                 'name': request.form.get('name'),
+                'email': request.form.get('email'),
                 'account_number': request.form.get('account_number'),
                 'pin': request.form.get('pin'),
                 'date': request.form.get('date'),
