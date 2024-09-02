@@ -18,51 +18,54 @@
 
     <!-- Login Form -->
     <div id="loginForm" class="mb-3">
-        <h2 class="loginFont">Login</h2>
-        <div class="mb-3">
-            <label for="email" class="form-label">Email address:</label>
-            <input type="email" class="form-control" id="email" placeholder="Enter email" autocomplete="email">
-        </div>
-        <div class="mb-3">
-            <label for="password" class="form-label">Password:</label>
-            <input type="password" class="form-control" id="password" placeholder="Password" autocomplete="current-password">
-        </div>
-        <button id="loginBtn" class="btn btn-primary">Login</button>
-        <p id="loginError" class="text-danger mt-2"></p>
-        <p>New? <a href="http://127.0.0.1:5000/register" class="registerPasswordlink" id="registerLink">Create an account</a></p>
+        <h2 class="loginFont">Log In</h2>
+        <form method="POST" action="">
+            <div class="mb-3">
+                <label for="email" class="form-label">Email address:</label>
+                <input type="email" class="form-control" id="email" placeholder="Enter email" autocomplete="email" required>
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label">Password:</label>
+                <input type="password" class="form-control" id="password" placeholder="Password" autocomplete="current-password" required>
+            </div>
+            <button id="loginBtn" class="btn btn-primary">Login</button>
+            <p id="loginError" class="text-danger mt-2"></p>
+            <p>New? <a href="http://127.0.0.1:5000/register" class="registerPasswordlink" id="registerLink">Create an account</a></p>
+        </form>
     </div>
 
     <!-- Password Generator (hidden initially) -->
     <div id="passwordGenerator" style="display:none;">
-    <!-- Username Display -->
-    <div class="d-flex justify-content-between align-items-center mb-2">
-        <span id="loggedInAs" class="text-muted"></span>
-    </div>
-        <div class="mb-2">
-            <label for="keyword-input" class="form-label">Keyword:</label>
-            <input type="text" id="keyword-input" class="form-control">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span id="loggedInAs" class="text-muted"></span>
         </div>
         <div class="mb-2">
-            <label for="length-input" class="form-label">Length:</label>
-            <input type="number" id="length-input" class="form-control" min="8" max="30" value="10">
+            <label for="phrase-input" class="form-label">Phrase:</label>
+            <input type="text" id="phrase-input" class="form-control" oninput="updateLengthInput()">
         </div>
-        <div class="form-check form-switch mb-2">
-            <input class="form-check-input" type="checkbox" id="numbers">
-            <label class="form-check-label" for="numbers">Include Numbers</label>
+        <div class="mb-2">
+            <label for="length-input" class="form-label">Password Length:</label>
+            <input type="number" id="length-input" class="form-control" min="1" max="80">
         </div>
-        <div class="form-check form-switch mb-2">
-            <input class="form-check-input" type="checkbox" id="symbols">
-            <label class="form-check-label" for="symbols">Include Symbols</label>
+        <!-- Options for password generation -->
+        <div class="form-check form-switch mt-2">
+            <input class="form-check-input" type="checkbox" id="replace_vowels">
+            <label class="form-check-label" for="replace_vowels">Replace Vowels</label>
         </div>
-        <div class="d-flex justify-content-between align-items-center">
-        <button id="generate-btn" class="btn btn-primary mb-2">
-            <i class="bi bi-shield-lock-fill"></i> Generate
-        </button>
-        <button id="logoutBtn" class="btn btn-warning mb-2 ">
-            <i class="bi bi-box-arrow-right"></i> Logout
-        </button>
+        <div class="form-check form-switch mt-2">
+            <input class="form-check-input" type="checkbox" id="exclude_numbers">
+            <label class="form-check-label" for="exclude_numbers">Exclude Numbers</label>
         </div>
-        <div class="input-group mb-2">
+        <div class="form-check form-switch mt-2">
+            <input class="form-check-input" type="checkbox" id="exclude_symbols">
+            <label class="form-check-label" for="exclude_symbols">Exclude Symbols</label>
+        </div>
+        <div class="form-check form-switch mt-2">
+            <input class="form-check-input" type="checkbox" id="randomize">
+            <label class="form-check-label" for="randomize">Randomize</label>
+        </div>
+        <button id="generate-btn" class="btn btn-primary mt-4">Generate Password</button>
+        <div class="input-group mb-2 mt-2">
             <input type="text" id="generated-password" class="form-control">
             <button id="copy-btn" class="btn btn-outline-secondary" type="button">
                 <i class="bi bi-clipboard"></i>
@@ -71,6 +74,9 @@
         <div id="strength-indicator" class="mb-2">
             <!-- Password strength will be displayed here -->
         </div>
+        <button id="logoutBtn" class="btn btn-warning mt-2">
+            Logout
+        </button>
     </div>
 </div>
 
@@ -79,3 +85,4 @@
 <script src="popper.min.js"></script>
 </body>
 </html>
+

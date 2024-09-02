@@ -42,49 +42,71 @@ def setSessionID(userID):
     sessionID = userID
 
 
-
-def generate_password(keyword, length, use_numbers, use_symbols, replace_vowels, replace_most_frequent_vowel, remove_vowels, randomize):
-
+def generate_password(phrase, length, exclude_numbers=False, exclude_symbols=False, replace_vowels=False, remove_vowels=False, randomize=False):
     characters = string.ascii_letters  # Always use letters
 
-    if use_numbers:
-        characters += string.digits
+    # Remove spaces from the phrase
+    phrase = phrase.replace(" ", "")
 
-    if use_symbols:
+    # Include numbers and symbols unless excluded
+    if not exclude_numbers:
+        characters += string.digits
+    if not exclude_symbols:
         characters += string.punctuation
 
-    # Ensure the password is at least as long as the keyword
-    if length < len(keyword):
+    # Ensure the password is at least as long as the phrase
+    if not phrase or length < len(phrase):
         return ""
 
-    # Apply transformations
+    # Replace vowels with numbers and symbols inconsistently
     if replace_vowels:
-        keyword = keyword.replace('a', '@').replace('e', '3').replace('i', '1').replace('o', '0').replace('u', 'u')
+        phrase = ''.join([
+            random.choice(['@', 'A', 'a']) if char == 'a' else
+            random.choice(['3', 'E', 'e']) if char == 'e' else
+            random.choice(['1', 'I', 'i']) if char == 'i' else
+            random.choice(['0', 'O', 'o']) if char == 'o' else
+            random.choice(['U', 'u']) if char == 'u' else
+            char for char in phrase
+        ])
 
-    if replace_most_frequent_vowel:
-        most_frequent_vowel = max(set(keyword), key=keyword.count)
-        if most_frequent_vowel in 'aeiou':
-            keyword = keyword.replace(most_frequent_vowel, 'x')
+    # Revert numbers and symbols back to their original letters if excluded
+    if exclude_numbers:
+        phrase = phrase.replace('1', 'i').replace('3', 'e').replace('0', 'o')
+    if exclude_symbols:
+        phrase = phrase.replace('@', 'a').replace('&', 'a').replace('$', 's').replace('#', 'h')
 
+    # Remove vowels from the phrase if selected
     if remove_vowels:
-        keyword = ''.join([char for char in keyword if char not in 'aeiou'])
+        phrase = ''.join([char for char in phrase if char not in 'aeiou'])
 
+    # Randomize the characters in the phrase if selected
     if randomize:
-        keyword = ''.join(random.sample(keyword, len(keyword)))
+        phrase = ''.join(random.sample(phrase, len(phrase)))
 
-    # Add random characters to the keyword until desired length is reached
-    while len(keyword) < length:
-        keyword += random.choice(characters)
+    # Phoneme mapping
+    phoneme_map = {
+        'a': 'A', 'e': 'E', 'i': 'I', 'o': 'O', 'u': 'U',
+        'b': 'B', 'c': 'C', 'd': 'D', 'f': 'F', 'g': 'G',
+        'h': 'H', 'j': 'J', 'k': 'K', 'l': 'L', 'm': 'M',
+        'n': 'N', 'p': 'P', 'q': 'Q', 'r': 'R', 's': 'S',
+        't': 'T', 'v': 'V', 'w': 'W', 'x': 'X', 'y': 'Y', 'z': 'Z'
+    }
+    phrase_phoneme = ''.join([phoneme_map.get(char, char) for char in phrase])
 
-    # Pattern is basically every third character from the keyword (subjected to change)
+    # Add random characters to the phrase_phoneme until the desired length is reached
+    while len(phrase_phoneme) < length:
+        phrase_phoneme += random.choice(characters)
+
+    # Generate the password by adding characters based on the phoneme pattern
     password = ""
     for i in range(length):
-        if i % 3 == 0 and i // 3 < len(keyword):
-            password += keyword[i // 3]
+        if i < len(phrase_phoneme):
+            password += phrase_phoneme[i]
         else:
             password += random.choice(characters)
 
     return password
+
 
 
 
@@ -135,29 +157,39 @@ def check_password_strength(password):
     if not password:
         return strength
 
-    if len(password) >= 8:
+    # Length check: More than 12 characters is considered stronger for passphrases
+    if len(password) >= 12:
         strength['score'] += 1
+    elif len(password) >= 8:
+        strength['score'] += 0.5
 
+    # Check for digits
     if any(char.isdigit() for char in password):
         strength['score'] += 1
 
-    if any(char.isupper() for char in password):
+    # Check for uppercase and lowercase combination
+    if any(char.isupper() for char in password) and any(char.islower() for char in password):
         strength['score'] += 1
 
+    # Check for symbols
     if any(char in string.punctuation for char in password):
         strength['score'] += 1
 
+    # Check for the presence of both letters and numbers/symbols
+    if any(char.isalpha() for char in password) and (any(char.isdigit() for char in password) or any(char in string.punctuation for char in password)):
+        strength['score'] += 1
+
     # Update status and color based on score
-    if strength['score'] == 4:
+    if strength['score'] >= 5:
         strength['status'] = 'Very Strong'
         strength['color'] = 'green'
-    elif strength['score'] == 3:
+    elif strength['score'] >= 4:
         strength['status'] = 'Strong'
         strength['color'] = 'lightgreen'
-    elif strength['score'] == 2:
+    elif strength['score'] >= 3:
         strength['status'] = 'Moderate'
         strength['color'] = 'orange'
-    elif strength['score'] == 1:
+    else:
         strength['status'] = 'Weak'
         strength['color'] = 'red'
 
@@ -165,10 +197,11 @@ def check_password_strength(password):
 
 
 
+
 @app.route('/create_password', methods=['GET'])
 def create_password():
     # Default values for initial page load
-    return render_template('createPassword.html')  # , password="", keyword="", length=8, use_numbers=False, use_symbols=False
+    return render_template('createPassword.html')
 
 
 
@@ -178,28 +211,28 @@ def handle_create_password():
     password = ""
     strength = None
     error = None
-    keyword = request.form.get('keyword')
+    phrase = request.form.get('phrase')
     length = int(request.form.get('length', 8))  # Provide a default value in case it's not set
-    use_numbers = 'numbers' in request.form
-    use_symbols = 'symbols' in request.form
+    exclude_numbers = 'exclude_numbers' in request.form
+    exclude_symbols = 'exclude_symbols' in request.form
     replace_vowels = 'replace_vowels' in request.form
-    replace_most_frequent_vowel = 'replace_most_frequent_vowel' in request.form
     remove_vowels = 'remove_vowels' in request.form
     randomize = 'randomize' in request.form
 
     # Validate options and generate password
-    if not use_numbers and not use_symbols:
-        error = "Please select at least one option: Use Numbers or Use Symbols."
+    if not phrase:
+        error = "Please enter a phrase."
     else:
-        password = generate_password(keyword, length, use_numbers, use_symbols, replace_vowels, replace_most_frequent_vowel, remove_vowels, randomize)
+        password = generate_password(phrase, length, exclude_numbers, exclude_symbols, replace_vowels,
+                                     remove_vowels, randomize)
         strength = check_password_strength(password)
         if not password:
-            error = "Failed to generate password. Ensure the keyword is shorter than the desired password length."
+            error = "Failed to generate password. Ensure the phrase is shorter than the desired password length."
 
     # Render the same template with new data
-    return render_template('createPassword.html', password=password, strength=strength, error=error, keyword=keyword,
-                           length=length, use_numbers=use_numbers, use_symbols=use_symbols, replace_vowels=replace_vowels,
-                           replace_most_frequent_vowel=replace_most_frequent_vowel, remove_vowels=remove_vowels, randomize=randomize)
+    return render_template('createPassword.html', password=password, strength=strength, error=error, phrase=phrase,
+                           length=length, exclude_numbers=exclude_numbers, exclude_symbols=exclude_symbols,
+                           replace_vowels=replace_vowels, remove_vowels=remove_vowels, randomize=randomize)
 
 
 
@@ -216,7 +249,7 @@ def login():
 
             findPost = userData.find_one({"email": email})
 
-            # print("Decrypt Username: ", decrypt(findPost['username']))
+            print("Decrypt Username: ", decrypt(findPost['username']))
             # print("Decrypt Password: ", decrypt(findPost['loginPassword']))
 
             # print(findPost)

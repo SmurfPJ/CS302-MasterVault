@@ -568,103 +568,187 @@ function checkMasterPasswordMatch() {
 
 
 //generate passwords
-function validateForm() {
-    var useNumbers = document.getElementById('numbers').checked;
-    var useSymbols = document.getElementById('symbols').checked;
+document.addEventListener('DOMContentLoaded', function () {
+    // Check if elements exist before using them
+    const phraseInput = document.getElementById('phrase-input');
+    const lengthInput = document.getElementById('length-input');
+    const generatedPasswordField = document.getElementById('generated-password');
+    const clipboardButton = document.getElementById('clipboard-button');
+    const excludeNumbersCheckbox = document.getElementById('exclude_numbers');
+    const excludeSymbolsCheckbox = document.getElementById('exclude_symbols');
+    const replaceVowelsCheckbox = document.getElementById('replace_vowels');
+    const randomizeCheckbox = document.getElementById('randomize');
 
-    if (!useNumbers && !useSymbols) {
-        alert("Please select at least one option: Include Numbers or Include Symbols.");
-        return false;
+// Refresh and generate a new password
+    function refreshPassword() {
+        var phrase = phraseInput.value;
+        var length = parseInt(lengthInput.value, 10);
+        var excludeNumbers = excludeNumbersCheckbox.checked;
+        var excludeSymbols = excludeSymbolsCheckbox.checked;
+        var replaceVowels = replaceVowelsCheckbox.checked;
+        var randomize = randomizeCheckbox.checked;
+
+        var newPassword = generatePassword(phrase, length, excludeNumbers, excludeSymbols, replaceVowels, false, randomize);
+        generatedPasswordField.value = newPassword;
+
+        checkPasswordStrength(newPassword);
     }
-    return true;
-}
 
-
-
-
-function generatePassword(keyword, length, useNumbers, useSymbols) {
-    var characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" + keyword;
-
-    if (useNumbers) {
-        characters += "0123456789";
-    }
-    if (useSymbols) {
-        characters += "!@#$%^&*()_-+=<>?/[]{}|";
+    if (phraseInput) {
+        // Update length input based on phrase length
+        phraseInput.addEventListener('input', updateLengthInput);
     }
 
-    var password = "";
-    for (var i = 0; i < length; i++) {
-        // Every third character is from the keyword
-        if (i % 3 === 0 && i/3 < keyword.length) {
-            password += keyword.charAt(i/3);
-        } else {
-            password += characters.charAt(Math.floor(Math.random() * characters.length));
+    if (clipboardButton) {
+        clipboardButton.addEventListener('click', copyToClipboard);
+    }
+
+    if (replaceVowelsCheckbox) {
+        replaceVowelsCheckbox.addEventListener('change', handleReplaceVowelsToggle);
+    }
+
+    // Function to update length input based on the phrase length
+    function updateLengthInput() {
+        var phrase = phraseInput.value;
+        var minLength = phrase.replace(/\s+/g, '').length; // Minimum length without spaces
+        lengthInput.min = minLength;
+
+        if (lengthInput.value < minLength) {
+            lengthInput.value = minLength; // Adjust if current value is less than minLength
         }
     }
 
-    return password;
-}
+    // Function to update the strength indicator based on the strength score
+    function updateStrengthIndicator(strength) {
+        const strengthBarInner = document.getElementById('strength-bar-inner');
+        if (strengthBarInner) {
+            strengthBarInner.style.width = (strength.score / 5) * 100 + '%';
+            strengthBarInner.style.backgroundColor = strength.color;
+        }
 
-
-function updateStrengthIndicator(strength) {
-    document.getElementById('strength-bar-inner').style.width = (strength.score * 25) + '%';
-    document.getElementById('strength-bar-inner').style.backgroundColor = strength.color;
-    document.getElementById('strength-text').innerText = strength.status;
-}
-
-function refreshPassword() {
-    var keyword = document.getElementById('keyword-input').value;
-    var length = document.getElementById('length-input').value;
-    var useNumbers = document.getElementById('numbers').checked;
-    var useSymbols = document.getElementById('symbols').checked;
-
-    var newPassword = generatePassword(keyword, length, useNumbers, useSymbols);
-    document.getElementById('generated-password').value = newPassword;
-
-    // Update the password strength checker
-    checkPasswordStrength(newPassword);
-}
-
-
-function checkPasswordStrength(password) {
-    var strength = {status: 'Weak', score: 0, color: 'red'};
-
-    if (password.length >= 8) strength.score += 1;
-    if (/[0-9]/.test(password)) strength.score += 1;
-    if (/[A-Z]/.test(password)) strength.score += 1;
-    if (/[^A-Za-z0-9]/.test(password)) strength.score += 1;
-
-    if (strength.score === 4) {
-        strength.status = 'Very Strong';
-        strength.color = 'green';
-    } else if (strength.score === 3) {
-        strength.status = 'Strong';
-        strength.color = 'lightgreen';
-    } else if (strength.score === 2) {
-        strength.status = 'Moderate';
-        strength.color = 'orange';
+        const strengthText = document.getElementById('strength-text');
+        if (strengthText) {
+            strengthText.textContent = strength.status;
+        }
     }
 
-    // Update the UI with the calculated strength
-    updateStrengthIndicator(strength);
-}
+    // Function to check the strength of the generated password
+    function checkPasswordStrength(password) {
+        var strength = { status: 'Weak', score: 0, color: 'red' };
 
+        if (password.length >= 12) strength.score += 1;
+        else if (password.length >= 8) strength.score += 0.5;
 
-function copyToClipboard() {
-    // Copy password to clipboard
-    var passwordField = document.getElementById('generated-password');
-    passwordField.select();
-    document.execCommand('copy');
+        if (/[0-9]/.test(password)) strength.score += 1;
+        if (/[A-Z]/.test(password) && /[a-z]/.test(password)) strength.score += 1;
+        if (/[^A-Za-z0-9]/.test(password)) strength.score += 1;
+        if (/[A-Za-z]/.test(password) && (/[0-9]/.test(password) || /[^A-Za-z0-9]/.test(password))) {
+            strength.score += 1;
+        }
 
-    // Change icon to clipboard-check
-    document.getElementById('clipboard-icon').className = 'bi bi-clipboard-check';
+        if (strength.score >= 5) {
+            strength.status = 'Very Strong';
+            strength.color = 'green';
+        } else if (strength.score >= 4) {
+            strength.status = 'Strong';
+            strength.color = 'lightgreen';
+        } else if (strength.score >= 3) {
+            strength.status = 'Moderate';
+            strength.color = 'orange';
+        }
 
+        updateStrengthIndicator(strength);
+    }
 
-    setTimeout(function () {
-        document.getElementById('clipboard-icon').className = 'bi bi-clipboard';
-    }, 2000); //2 seconds
-}
+    // Function to copy the generated password to the clipboard
+    function copyToClipboard() {
+        var passwordField = generatedPasswordField;
+        passwordField.select();
+        navigator.clipboard.writeText(passwordField.value).then(() => {
+            document.getElementById('clipboard-icon').className = 'bi bi-clipboard-check';
+            setTimeout(function () {
+                document.getElementById('clipboard-icon').className = 'bi bi-clipboard';
+            }, 2000); // 2 seconds
+        }).catch(err => {
+            console.error('Failed to copy text: ', err);
+        });
+    }
 
+    // Function to generate a password using provided options
+    function generatePassword(phrase, length, excludeNumbers = false, excludeSymbols = false, replaceVowels = false, removeVowels = false, randomize = false) {
+        var characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        phrase = phrase.replace(/\s+/g, ''); // Remove spaces
+
+        if (!excludeNumbers) characters += "0123456789";
+        if (!excludeSymbols) characters += "!@#$%^&*()_-+=<>?/[]{}|";
+
+        if (!phrase || length < phrase.length) return ""; // Ensure minimum length
+
+        if (replaceVowels) {
+            phrase = phrase.split('').map(function (char) {
+                switch (char) {
+                    case 'a': return Math.random() < 0.5 ? '@' : 'A';
+                    case 'e': return Math.random() < 0.5 ? '3' : 'E';
+                    case 'i': return Math.random() < 0.5 ? '1' : 'I';
+                    case 'o': return Math.random() < 0.5 ? '0' : 'O';
+                    case 'u': return Math.random() < 0.5 ? 'U' : 'u';
+                    default: return char;
+                }
+            }).join('');
+        }
+
+        if (excludeNumbers) {
+            phrase = phrase.replace(/1/g, 'i').replace(/3/g, 'e').replace(/0/g, 'o');
+        }
+
+        if (excludeSymbols) {
+            phrase = phrase.replace(/@/g, 'a').replace(/&/g, 'a').replace(/\$/g, 's').replace(/#/g, 'h');
+        }
+
+        if (removeVowels) {
+            phrase = phrase.replace(/[aeiou]/g, '');
+        }
+
+        if (randomize) {
+            phrase = phrase.split('').sort(() => 0.5 - Math.random()).join('');
+        }
+
+        var phonemeMap = {
+            'a': 'A', 'e': 'E', 'i': 'I', 'o': 'O', 'u': 'U',
+            'b': 'B', 'c': 'C', 'd': 'D', 'f': 'F', 'g': 'G',
+            'h': 'H', 'j': 'J', 'k': 'K', 'l': 'L', 'm': 'M',
+            'n': 'N', 'p': 'P', 'q': 'Q', 'r': 'R', 's': 'S',
+            't': 'T', 'v': 'V', 'w': 'W', 'x': 'X', 'y': 'Y', 'z': 'Z'
+        };
+
+        var phrasePhoneme = phrase.split('').map(function (char) {
+            return phonemeMap[char] || char;
+        }).join('');
+
+        while (phrasePhoneme.length < length) {
+            phrasePhoneme += characters.charAt(Math.floor(Math.random() * characters.length));
+        }
+
+        var password = "";
+        for (var i = 0; i < length; i++) {
+            if (i < phrasePhoneme.length) {
+                password += phrasePhoneme[i];
+            } else {
+                password += characters.charAt(Math.floor(Math.random() * characters.length));
+            }
+        }
+
+        return password;
+    }
+
+    // Handle the replace vowels toggle
+    function handleReplaceVowelsToggle() {
+        if (replaceVowelsCheckbox.checked) {
+            excludeNumbersCheckbox.checked = false;
+            excludeSymbolsCheckbox.checked = false;
+        }
+    }
+});
 
 
 
@@ -785,5 +869,5 @@ document.addEventListener('DOMContentLoaded', function() {
             event.stopPropagation();
         });
     }
-});
+})
 

@@ -30,116 +30,66 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-});
+    // Handle login
+    document.getElementById('loginBtn').addEventListener('click', function() {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
 
-     // Handle login
-document.getElementById('loginBtn').addEventListener('click', function() {
-const email = document.getElementById('email').value;
-const password = document.getElementById('password').value;
-
-fetch('http://127.0.0.1:5000/', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ email: email, password: password })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === 'success') {
-            chrome.storage.local.set({ 'userSession': data });
-            // No need to manually update the UI here
-        } else {
-            document.getElementById('loginError').innerText = data.message;
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
+        fetch('http://127.0.0.1:5000/', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ email: email, password: password })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                chrome.storage.local.set({ 'userSession': data });
+            } else {
+                document.getElementById('loginError').innerText = data.message;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
     });
-});
 
-
-// Handle logout
-document.getElementById('logoutBtn').addEventListener('click', function() {
-     chrome.storage.local.remove('userSession', function() {
-            // User session cleared, switch back to login view
+    // Handle logout
+    document.getElementById('logoutBtn').addEventListener('click', function() {
+        chrome.storage.local.remove('userSession', function() {
             document.getElementById('passwordGenerator').style.display = 'none';
             document.getElementById('loginForm').style.display = 'block';
         });
     });
 
-document.addEventListener("DOMContentLoaded", function() {
-    // Elements
-    var keywordInput = document.getElementById('keyword-input');
-    var lengthInput = document.getElementById('length-input');
-    var numbersCheckbox = document.getElementById('numbers');
-    var symbolsCheckbox = document.getElementById('symbols');
-    var generateBtn = document.getElementById('generate-btn');
-    var generatedPasswordInput = document.getElementById('generated-password');
-    var copyBtn = document.getElementById('copy-btn');
-    var strengthIndicator = document.getElementById('strength-indicator');
+    // Password generation logic
+    document.getElementById('generate-btn').addEventListener('click', function() {
+        const phrase = document.getElementById('phrase-input').value;
+        const length = parseInt(document.getElementById('length-input').value);
+        const replaceVowels = document.getElementById('replace_vowels').checked;
+        const excludeNumbers = document.getElementById('exclude_numbers').checked;
+        const excludeSymbols = document.getElementById('exclude_symbols').checked;
+        const randomize = document.getElementById('randomize').checked;
 
+        let password = generatePassword(phrase, length, replaceVowels, excludeNumbers, excludeSymbols, randomize);
+        document.getElementById('generated-password').value = password;
 
-    // Event Listener for Generate Button
-generateBtn.addEventListener('click', function() {
-    var keyword = keywordInput.value;
-    var length = parseInt(lengthInput.value);
-    var useNumbers = numbersCheckbox.checked;
-    var useSymbols = symbolsCheckbox.checked;
-
-    // Validation: At least one of "useNumbers" or "useSymbols" must be true
-    if (!useNumbers && !useSymbols) {
-        alert("Please select at least one option: Include Numbers or Include Symbols.");
-        return;  // Exit the function early
-    }
-
-
-    var password = generatePassword(keyword, length, useNumbers, useSymbols);
-    generatedPasswordInput.value = password;
-
-    var strength = checkPasswordStrength(password);
-    updateStrengthIndicator(strength);
-});
-
-
-generatedPasswordInput.addEventListener('input', function() {
-    var currentPassword = generatedPasswordInput.value;
-    var strength = checkPasswordStrength(currentPassword);
-    updateStrengthIndicator(strength);
-});
-
-    // Event Listener for Copy Button
-    copyBtn.addEventListener('click', function() {
-        generatedPasswordInput.select();
-        document.execCommand('copy');
-        copyBtn.innerHTML = '<i class="bi bi-clipboard-check"></i>';
-        setTimeout(function() {
-            copyBtn.innerHTML = '<i class="bi bi-clipboard"></i>';
-        }, 2000); // Reset icon after 2 seconds
+        let strength = checkPasswordStrength(password);
+        updateStrengthIndicator(strength);
     });
 
-    // Event Listener for real-time password strength check
-    generatedPasswordInput.addEventListener('input', function() {
-    var currentPassword = generatedPasswordInput.value;
-    var strength = checkPasswordStrength(currentPassword);
-    updateStrengthIndicator(strength);
-});
+    function generatePassword(phrase, length, replaceVowels, excludeNumbers, excludeSymbols, randomize) {
+        let characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        if (!excludeNumbers) characters += "0123456789";
+        if (!excludeSymbols) characters += "!@#$%^&*()_-+=<>?/[]{}|";
 
-    function generatePassword(keyword, length, useNumbers, useSymbols) {
-        var characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" + keyword;
-
-        if (useNumbers) {
-            characters += "0123456789";
-        }
-        if (useSymbols) {
-            characters += "!@#$%^&*()_-+=<>?/[]{}|";
+        let password = "";
+        for (let i = 0; i < length; i++) {
+            password += characters.charAt(Math.floor(Math.random() * characters.length));
         }
 
-        var password = "";
-        for (var i = 0; i < length; i++) {
-            if (i % 3 === 0 && i/3 < keyword.length) {
-                password += keyword.charAt(i/3);
-            } else {
-                password += characters.charAt(Math.floor(Math.random() * characters.length));
-            }
+        // Add additional logic to handle replacements and randomization
+        if (replaceVowels) {
+            password = password.replace(/[aeiou]/gi, '*');  // Example replacement
         }
 
         return password;
@@ -168,7 +118,8 @@ generatedPasswordInput.addEventListener('input', function() {
     }
 
     function updateStrengthIndicator(strength) {
-        strengthIndicator.innerHTML = `
+        const indicator = document.getElementById('strength-indicator');
+        indicator.innerHTML = `
             <div class="progress" style="height: 20px;">
                 <div class="progress-bar" role="progressbar" style="width: ${strength.score * 25}%; background-color: ${strength.color};" aria-valuenow="${strength.score}" aria-valuemin="0" aria-valuemax="4"></div>
             </div>
@@ -176,4 +127,5 @@ generatedPasswordInput.addEventListener('input', function() {
         `;
     }
 });
+
 
