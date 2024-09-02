@@ -464,9 +464,11 @@ def master_password():
         if master_password == request.form['confirmMaster_password']:
             userData.update_one({"_id": sessionID}, {"$set": {"masterPassword": encrypt(master_password)}})
 
-        # Flash a success message
-        flash('Master password set up successfully!', 'success')
-        return redirect(url_for('passwordList'))
+            userData.update_one({"_id": sessionID}, {"$set": {"masterPassword": encrypt(master_password)}})
+
+            # Flash a success message
+            flash('Master password set up successfully!', 'success')
+            return redirect(url_for('passwordList'))
     
     return render_template('masterPassword.html')
 
