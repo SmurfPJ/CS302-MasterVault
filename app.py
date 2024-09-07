@@ -671,7 +671,7 @@ def resetPassword():
         newPassword = request.form['newPassword']
 
         if newPassword == request.form['confirmNewPassword']:
-            userData.update_one({"_id": sessionID}, {"$set": {"loginPassword": newPassword}})
+            userData.update_one({"_id": sessionID}, {"$set": {"loginPassword": encrypt(newPassword)}})
             return redirect(url_for('passwordList'))
 
     return render_template('resetPassword.html')
