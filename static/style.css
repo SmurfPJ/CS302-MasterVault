@@ -696,8 +696,14 @@ width: 300px;
 }
 
 .Landingfeature-item p {
-    font-family: Nunito, sans-serif;
+    font-family: 'Nunito';
+    font-weight: 600;
     font-size: 16px;
     color: #576574;
+}
+
+#ChromeExtensionIconLanding {
+     width: 130px;
+    height: auto;
 }
 
