@@ -236,6 +236,10 @@ def handle_create_password():
 
 
 
+@app.route('/landingPage', methods=['GET'])
+def landing_page():
+    return render_template("landingPage.html")
+
 @app.route('/', methods=['GET', 'POST'])
 def login():
     cform = LoginForm()
@@ -249,7 +253,7 @@ def login():
 
             findPost = userData.find_one({"email": email})
 
-            print("Decrypt Username: ", decrypt(findPost['username']))
+            # print("Decrypt Username: ", decrypt(findPost['username']))
             # print("Decrypt Password: ", decrypt(findPost['loginPassword']))
 
             # print(findPost)

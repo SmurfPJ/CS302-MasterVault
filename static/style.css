@@ -579,3 +579,125 @@ width: 300px;
     margin-top: 20px;
     margin-left: 50px;
 }
+
+/*Landing Page */
+.Landingheader {
+ display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background-color: white;
+}
+
+.Landinglogo {
+    display: flex;
+    align-items: center;
+}
+
+.Landinglogo img {
+    margin-right: 10px;
+}
+
+.navbarLanding ul {
+    display: flex;
+    list-style: none;
+}
+
+.navbarLanding ul li {
+    margin-left: 20px;
+}
+
+.navbarLanding ul li a {
+    text-decoration: none;
+    color: #333;
+    font-weight: bold;
+}
+
+.Landingbtn {
+    border: 2px solid #333;
+    padding: 8px 15px;
+    border-radius: 20px;
+}
+
+.Landingbtn:hover {
+    background-color: #87aede;
+    border-color: black;
+}
+
+.btn-login {
+    background-color: white;
+}
+
+.btn-register {
+    background-color: white;
+}
+
+.Landing-intro {
+ display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 50px;
+    background-color: #fff;
+}
+
+.Landing-text {
+    max-width: 50%;
+}
+
+.Landing-text h2 {
+    font-family: Inter, sans-serif;
+    font-size: 36px;
+    font-weight: bold;
+    color: #173356;
+}
+
+.Landing-text p {
+    font-style: italic;
+    margin-top: 20px;
+    font-size: 18px;
+    color: #576574;
+}
+
+.Landing-image {
+    max-width: 100%;
+    height: auto;
+}
+
+.Landing-image img {
+    width: 600px;
+}
+
+.Landingfeatures {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 30px;
+    padding: 50px;
+}
+
+.Landingfeature-item {
+    text-align: center;
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.Landingfeature-item img {
+    width: 150px;
+    height: auto;
+}
+
+.Landingfeature-item h3 {
+    font-family: Inter, sans-serif;
+    font-weight: bold;
+    font-size: 20px;
+    margin: 15px;
+    color: #192a56;
+}
+
+.Landingfeature-item p {
+    font-family: Nunito, sans-serif;
+    font-size: 16px;
+    color: #576574;
+}
+
