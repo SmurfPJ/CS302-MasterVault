@@ -1,6 +1,3 @@
-// Check if we're in the context of the browser extension
-var isExtensionContext = typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id;
-
 chrome.storage.onChanged.addListener(function(changes, namespace) {
     for (var key in changes) {
         var storageChange = changes[key];
@@ -35,7 +32,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
 
-        fetch('http://127.0.0.1:5000/', {
+        fetch('http://127.0.0.1:5000', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ email: email, password: password })

@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from flask_mail import Mail, Message
+from flask_cors import CORS
 from forms import RegistrationForm, LoginForm, AnimalSelectionForm, FamilyRegistrationForm
 from dotenv import load_dotenv
 from encryption import encrypt, decrypt
@@ -24,6 +25,7 @@ temporary_2fa_storage = {} # Temporary storage for 2FA codes
 writeToLogin = open('loginInfo', 'w')
 
 app = Flask(__name__)
+CORS(app)
 mail = Mail(app)
 load_dotenv()
 
