@@ -42,68 +42,71 @@ def setSessionID(userID):
     sessionID = userID
 
 
-def generate_password(phrase, length, exclude_numbers=False, exclude_symbols=False, replace_vowels=False, remove_vowels=False, randomize=False):
-    characters = string.ascii_letters  # Always use letters
+def generate_password(phrase, length, exclude_numbers=False, exclude_symbols=False, replace_vowels=False,
+                      remove_vowels=False, randomize=False):
+    # Always start with letters as the base characters
+    characters = string.ascii_letters
 
     # Remove spaces from the phrase
     phrase = phrase.replace(" ", "")
 
-    # Include numbers and symbols unless excluded
+    # Add numbers and symbols unless excluded
     if not exclude_numbers:
         characters += string.digits
     if not exclude_symbols:
         characters += string.punctuation
 
-    # Ensure the password is at least as long as the phrase
-    if not phrase or length < len(phrase):
-        return ""
+    # Ensure the phrase is shorter or equal to the password length
+    if len(phrase) > length:
+        phrase = phrase[:length]  # Shorten the phrase
 
-    # Replace vowels with numbers and symbols inconsistently
+    # Extended vowel map with more phoneme-based replacements
     if replace_vowels:
-        phrase = ''.join([
-            random.choice(['@', 'A', 'a']) if char == 'a' else
-            random.choice(['3', 'E', 'e']) if char == 'e' else
-            random.choice(['1', 'I', 'i']) if char == 'i' else
-            random.choice(['0', 'O', 'o']) if char == 'o' else
-            random.choice(['U', 'u']) if char == 'u' else
-            char for char in phrase
-        ])
+        vowel_map = {
+            'a': ['@', 'A', 'æ', '4', 'â', 'ä'],
+            'e': ['3', 'E', '€', 'ê', 'é', 'ë'],
+            'i': ['1', 'I', '!', 'î', 'ï', 'í'],
+            'o': ['0', 'O', 'ø', 'ô', 'ö', 'ó'],
+            'u': ['U', 'u', 'ù', 'û', 'ü', 'ú']
+        }
+        # Replace vowels in the phrase using the extended vowel map
+        phrase = ''.join([random.choice(vowel_map.get(char.lower(), [char])) for char in phrase])
 
-    # Revert numbers and symbols back to their original letters if excluded
+    # Revert numbers and symbols if they are excluded
     if exclude_numbers:
         phrase = phrase.replace('1', 'i').replace('3', 'e').replace('0', 'o')
     if exclude_symbols:
         phrase = phrase.replace('@', 'a').replace('&', 'a').replace('$', 's').replace('#', 'h')
 
-    # Remove vowels from the phrase if selected
+    # Remove vowels if selected
     if remove_vowels:
-        phrase = ''.join([char for char in phrase if char not in 'aeiou'])
+        phrase = ''.join([char for char in phrase if char.lower() not in 'aeiou'])
 
-    # Randomize the characters in the phrase if selected
+    # Randomize the phrase characters if selected
     if randomize:
         phrase = ''.join(random.sample(phrase, len(phrase)))
 
-    # Phoneme mapping
+    # Extended phoneme mapping for letters
     phoneme_map = {
-        'a': 'A', 'e': 'E', 'i': 'I', 'o': 'O', 'u': 'U',
-        'b': 'B', 'c': 'C', 'd': 'D', 'f': 'F', 'g': 'G',
-        'h': 'H', 'j': 'J', 'k': 'K', 'l': 'L', 'm': 'M',
-        'n': 'N', 'p': 'P', 'q': 'Q', 'r': 'R', 's': 'S',
-        't': 'T', 'v': 'V', 'w': 'W', 'x': 'X', 'y': 'Y', 'z': 'Z'
+        'a': 'A', 'b': 'B', 'c': 'C', 'd': 'D', 'e': 'E', 'f': 'F',
+        'g': 'G', 'h': 'H', 'i': 'I', 'j': 'J', 'k': 'K', 'l': 'L',
+        'm': 'M', 'n': 'N', 'o': 'O', 'p': 'P', 'q': 'Q', 'r': 'R',
+        's': 'S', 't': 'T', 'u': 'U', 'v': 'V', 'w': 'W', 'x': 'X',
+        'y': 'Y', 'z': 'Z',
+        # Phoneme-based alternatives for additional variety
+        'ph': 'F', 'gh': 'G', 'ch': 'C', 'sh': 'S', 'th': 'T'
     }
-    phrase_phoneme = ''.join([phoneme_map.get(char, char) for char in phrase])
 
-    # Add random characters to the phrase_phoneme until the desired length is reached
-    while len(phrase_phoneme) < length:
-        phrase_phoneme += random.choice(characters)
+    # Map the phrase to its phoneme equivalents
+    phrase_phoneme = ''.join([phoneme_map.get(char.lower(), char) for char in phrase])
 
-    # Generate the password by adding characters based on the phoneme pattern
-    password = ""
-    for i in range(length):
-        if i < len(phrase_phoneme):
-            password += phrase_phoneme[i]
-        else:
-            password += random.choice(characters)
+    # # Extend the phrase if it's too short
+    # while len(phrase_phoneme) < length:
+    #     phrase_phoneme += random.choice(characters)
+
+    # Generate the final password by picking characters from the phrase_phoneme
+    password = ''.join(
+        [phrase_phoneme[i] if i < len(phrase_phoneme) else random.choice(characters) for i in range(length)])
 
     return password
 

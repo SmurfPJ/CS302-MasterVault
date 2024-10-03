@@ -1,31 +1,44 @@
-// Define global interval variable for the countdown
-let timerInterval;
-timerInterval = null;
 
-document.addEventListener('DOMContentLoaded', function() {
-    const fieldMapping = {
-        'accountNumber': 'Account Number',
-        'username': 'Username',
-        'email': 'Email',
-        'pin': 'Pin',
-        'date': 'Date',
-        'other': 'Other'
-    };
+(function () {
+    // ----------------------------
+    // Global Variables
+    // ----------------------------
+    let globalTimerInterval = null;
 
-    const dropdownMenu = document.getElementById('dropdown-menu');
+    // ----------------------------
+    // Utility Functions
+    // ----------------------------
 
-    // Remove field and add it back to dropdown menu
-    window.removeField = function(field) {
-        const fieldContainer = document.getElementById(`field-${field}`);
-        fieldContainer.remove();
+    function capitalizeFirstLetter(string) {
+        return string.charAt(0).toUpperCase() + string.slice(1);
+    }
 
-        const dropdownItem = document.createElement('li');
-        dropdownItem.innerHTML = `<a class="dropdown-item" href="javascript:void(0);" onclick="addField('${field}')">${capitalizeFirstLetter(field)}</a>`;
-        dropdownMenu.appendChild(dropdownItem);
-    };
+    function displayMessageAndHide(feedbackElement, message, delay = 3500) {
+        feedbackElement.innerText = message;
+        setTimeout(() => {
+            feedbackElement.innerText = '';
+        }, delay);
+    }
 
-    // Add field and remove it from dropdown menu
-    window.addField = function(field) {
+    function updateStrengthIndicator(strength) {
+        const strengthBarInner = document.getElementById('strength-bar-inner');
+        if (strengthBarInner) {
+            strengthBarInner.style.width = (strength.score / 5) * 100 + '%';
+            strengthBarInner.style.backgroundColor = strength.color;
+        }
+
+        const strengthText = document.getElementById('strength-text');
+        if (strengthText) {
+            strengthText.textContent = strength.status;
+        }
+    }
+
+    // ----------------------------
+    // Field Management
+    // ----------------------------
+
+    // Expose addField and removeField to the global scope
+    window.addField = function (field) {
         const fieldHtml = `
             <div class="field-container" id="field-${field}">
                 <h4 class="mt-3">${capitalizeFirstLetter(field)}</h4>
@@ -43,10 +56,9 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
 
         const fieldsContainer = document.getElementById('fields-container');
-        let confirmButton;
-        confirmButton = document.querySelector('.addPasswordButton').parentElement.parentElement;
         fieldsContainer.insertAdjacentHTML('beforeend', fieldHtml);
 
+        const dropdownMenu = document.getElementById('dropdown-menu');
         const dropdownItems = dropdownMenu.querySelectorAll('a');
         dropdownItems.forEach(item => {
             if (item.textContent.toLowerCase().replace(' ', '_') === field) {
@@ -55,819 +67,883 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     };
 
-    // Capitalize first letter of field names
-    function capitalizeFirstLetter(string) {
-        return string.charAt(0).toUpperCase() + string.slice(1);
-    }
-});
-
-
-
-
-
-
-document.addEventListener('DOMContentLoaded', function() {
-  const lockSwitch = document.getElementById('lockSwitch');
-  const lockRange = document.getElementById('lockRange');
-  const lockRangeLabel = document.getElementById('lockRangeLabel');
-  const unlockForm = document.getElementById('unlockForm');
-  const toggleLockBtn = document.getElementById('toggleLockBtn');
-  const masterPasswordInput = document.getElementById('masterPasswordInput');
-  const toggleLockVisibilityBtn = document.getElementById('toggleLockVisibilityBtn');
-  const toggleLockVisibilityIcon = document.getElementById('toggleLockVisibilityIcon');
-   unlockAccountBtn.addEventListener('click', unlockAccount);
-  let timerInterval = null;
-
-  updateRangeLabel();
-  lockRange.addEventListener('input', updateRangeLabel);
-
-  const savedLockState = localStorage.getItem('lockState');
-  const savedUnlockTime = localStorage.getItem('unlockTime');
-
-  if (savedLockState === 'locked' && savedUnlockTime && new Date(savedUnlockTime) > new Date()) {
-    lockSwitch.checked = true;
-    lockRange.disabled = true;
-    toggleLockBtn.disabled = false;
-    toggleLockBtn.textContent = 'UNLOCK ACCOUNT';
-    unlockForm.style.display = 'none';
-    startCountdown(new Date(savedUnlockTime) - new Date());
-  } else {
-    resetLockUI();
-  }
-
-  lockSwitch.addEventListener('change', function() {
-    lockRange.disabled = !this.checked;
-    toggleLockBtn.disabled = !this.checked;
-    if (!this.checked) {
-      toggleLockBtn.textContent = 'LOCK ACCOUNT';
-      unlockForm.style.display = 'none';
-      localStorage.removeItem('lockState');
-      localStorage.removeItem('unlockTime');
-      if (timerInterval) {
-        clearInterval(timerInterval);
-        timerInterval = null;
-      }
-    }
-  });
-
-  toggleLockBtn.addEventListener('click', function() {
-    if (this.textContent.trim() === 'LOCK ACCOUNT') {
-      const lockDuration = lockRange.value * 10;
-      lockAccount(lockDuration);
-    } else {
-      unlockForm.style.display = unlockForm.style.display === 'none' ? 'block' : 'none';
-      this.textContent = unlockForm.style.display === 'block' ? 'CANCEL UNLOCK' : 'LOCK ACCOUNT';
-    }
-  });
-
-  masterPasswordInput.addEventListener('keydown', function(event) {
-    if (event.key === 'Enter') {
-      unlockAccount();
-    }
-  });
-
-  toggleLockVisibilityBtn.addEventListener('click', function() {
-    const type = masterPasswordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-    masterPasswordInput.setAttribute('type', type);
-    toggleLockVisibilityIcon.classList.toggle('bi-eye-slash');
-    toggleLockVisibilityIcon.classList.toggle('bi-eye');
-  });
-
-  function updateRangeLabel() {
-    const rangeValue = lockRange.value;
-    lockRangeLabel.innerText = rangeValue * 10 + ' minutes';
-  }
-
-  function lockAccount(duration) {
-    const lockTime = new Date();
-    const unlockTime = new Date(lockTime.getTime() + duration * 60000);
-
-    fetch('/lock_account', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lockDuration: duration })
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.status === 'success') {
-        alert('Account Locked Successfully');
-
-        localStorage.setItem('lockState', 'locked');
-        localStorage.setItem('unlockTime', unlockTime.toISOString());
-
-        startCountdown(duration * 60000);
-        toggleLockBtn.textContent = 'UNLOCK ACCOUNT';
-        lockSwitch.disabled = true;
-        lockRange.disabled = true;
-      } else {
-        alert(data.message);
-      }
-    })
-    .catch(error => console.error('Error:', error));
-  }
-
- function unlockAccount() {
-  const masterPassword = masterPasswordInput.value;
-  console.log("Attempting to unlock with master password:", masterPassword);
-  fetch('/unlock_account', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ master_password: masterPassword })
-  })
-  .then(response => response.json())
-  .then(data => {
-    console.log("Response from server:", data);
-    if (data.status === 'success') {
-      alert('Account Unlocked Successfully');
-
-      // Stop the countdown timer
-      stopCountdown();
-
-      // Reset lock state in local storage
-      localStorage.removeItem('lockState');
-      localStorage.removeItem('unlockTime');
-
-      // Reset the UI
-      resetLockUI();
-    } else {
-      alert('Failed to unlock account: ' + data.message);
-    }
-  })
-  .catch(error => console.error('Error:', error));
-}
-
-
-  function stopCountdown() {
-    clearInterval(timerInterval);
-    timerInterval = null;
-    lockRangeLabel.innerText = '0 minutes';
-  }
-
-  function startCountdown(durationInMilliseconds) {
-    const endTime = Date.now() + durationInMilliseconds;
-    timerInterval = setInterval(() => {
-      const remainingTime = endTime - Date.now();
-      if (remainingTime <= 0) {
-        clearInterval(timerInterval);
-        resetLockUI();
-        autoUnlock();
-      } else {
-        const minutes = Math.floor(remainingTime / 60000);
-        const seconds = Math.floor((remainingTime % 60000) / 1000);
-        lockRangeLabel.innerText = `${minutes}:${seconds.toString().padStart(2, '0')} minutes left`;
-      }
-    }, 1000);
-  }
-
-  function resetLockUI() {
-    lockSwitch.checked = false;
-    lockSwitch.disabled = false;
-    lockRange.value = 0;
-    lockRange.disabled = true;
-    updateRangeLabel();
-    toggleLockBtn.textContent = 'LOCK ACCOUNT';
-    toggleLockBtn.disabled = true;
-    unlockForm.style.display = 'none';
-    if (timerInterval) {
-      clearInterval(timerInterval);
-      timerInterval = null;
-    }
-  }
-
-  function autoUnlock() {
-    fetch('/auto_unlock_account', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.status === 'success') {
-        alert('Account Automatically Unlocked');
-
-        localStorage.removeItem('lockState');
-        localStorage.removeItem('unlockTime');
-
-        resetLockUI();
-      } else {
-        console.error('Failed to auto unlock account: ' + data.message);
-      }
-    })
-    .catch(error => console.error('Error:', error));
-  }
-});
-
-
-
-
-
-
-
-//2FA Authentications
-document.addEventListener('DOMContentLoaded', function() {
-    const twoStepVerificationCheckbox = document.getElementById('twoStepVerification');
-    const twoStepVerificationInput = document.getElementById('twoStepVerificationInput');
-    const verifyPinBtn = document.getElementById('verifyPinBtn');
-    const feedbackElement = document.getElementById('twoStepFeedback');
-    const userEmailElement = document.getElementById('userEmail');
-    const userEmail = userEmailElement ? userEmailElement.textContent : '';
-
-    // Update the 2FA toggle state based on server response
-    update2FAToggle();
-
-
-    twoStepVerificationCheckbox.addEventListener('change', function() {
-        if (this.checked) {
-            enable2FAandRequestPIN(userEmail, feedbackElement, twoStepVerificationInput);
-        } else {
-            disable2FA(userEmail, feedbackElement, twoStepVerificationInput);
+    window.removeField = function (field) {
+        const fieldContainer = document.getElementById(`field-${field}`);
+        if (fieldContainer) {
+            fieldContainer.remove();
         }
-    });
 
-    verifyPinBtn.addEventListener('click', function() {
-        verifyPIN(userEmail, feedbackElement, twoStepVerificationInput);
-    });
-});
+        const dropdownMenu = document.getElementById('dropdown-menu');
+        const dropdownItem = document.createElement('li');
+        dropdownItem.innerHTML = `<a class="dropdown-item" href="javascript:void(0);" onclick="addField('${field}')">${capitalizeFirstLetter(field)}</a>`;
+        dropdownMenu.appendChild(dropdownItem);
+    };
+
+    // ----------------------------
+    // Account Locking Mechanism
+    // ----------------------------
+
+    // All account locking related functions
+    window.lockAccount = function (duration) {
+        const lockTime = new Date();
+        const unlockTime = new Date(lockTime.getTime() + duration * 60000);
+
+        fetch('/lock_account', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lockDuration: duration })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('Account Locked Successfully');
+
+                    localStorage.setItem('lockState', 'locked');
+                    localStorage.setItem('unlockTime', unlockTime.toISOString());
+
+                    startCountdown(duration * 60000);
+                    document.getElementById('toggleLockBtn').textContent = 'UNLOCK ACCOUNT';
+                    document.getElementById('lockSwitch').disabled = true;
+                    document.getElementById('lockRange').disabled = true;
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    };
+
+    window.unlockAccount = function () {
+        const masterPasswordInput = document.getElementById('masterPasswordInput');
+        const masterPassword = masterPasswordInput.value;
+        console.log("Attempting to unlock with master password:", masterPassword);
+        fetch('/unlock_account', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ master_password: masterPassword })
+        })
+            .then(response => response.json())
+            .then(data => {
+                console.log("Response from server:", data);
+                if (data.status === 'success') {
+                    alert('Account Unlocked Successfully');
+
+                    // Stop the countdown timer
+                    stopCountdown();
+
+                    // Reset lock state in local storage
+                    localStorage.removeItem('lockState');
+                    localStorage.removeItem('unlockTime');
+
+                    // Reset the UI
+                    resetLockUI();
+                } else {
+                    alert('Failed to unlock account: ' + data.message);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    };
+
+    function startCountdown(durationInMilliseconds) {
+        const endTime = Date.now() + durationInMilliseconds;
+        globalTimerInterval = setInterval(() => {
+            const remainingTime = endTime - Date.now();
+            if (remainingTime <= 0) {
+                clearInterval(globalTimerInterval);
+                resetLockUI();
+                autoUnlock();
+            } else {
+                const minutes = Math.floor(remainingTime / 60000);
+                const seconds = Math.floor((remainingTime % 60000) / 1000);
+                document.getElementById('lockRangeLabel').innerText = `${minutes}:${seconds.toString().padStart(2, '0')} minutes left`;
+            }
+        }, 1000);
+    }
+
+    function stopCountdown() {
+        if (globalTimerInterval) {
+            clearInterval(globalTimerInterval);
+            globalTimerInterval = null;
+        }
+        document.getElementById('lockRangeLabel').innerText = '0 minutes';
+    }
+
+    function resetLockUI() {
+        const lockSwitch = document.getElementById('lockSwitch');
+        const lockRange = document.getElementById('lockRange');
+        const toggleLockBtn = document.getElementById('toggleLockBtn');
+        const unlockForm = document.getElementById('unlockForm');
+
+        lockSwitch.checked = false;
+        lockSwitch.disabled = false;
+        lockRange.value = 0;
+        lockRange.disabled = true;
+        document.getElementById('lockRangeLabel').innerText = '0 minutes';
+        toggleLockBtn.textContent = 'LOCK ACCOUNT';
+        toggleLockBtn.disabled = true;
+        unlockForm.style.display = 'none';
+
+        if (globalTimerInterval) {
+            clearInterval(globalTimerInterval);
+            globalTimerInterval = null;
+        }
+    }
+
+    function autoUnlock() {
+        fetch('/auto_unlock_account', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('Account Automatically Unlocked');
+
+                    localStorage.removeItem('lockState');
+                    localStorage.removeItem('unlockTime');
+
+                    resetLockUI();
+                } else {
+                    console.error('Failed to auto unlock account: ' + data.message);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+    // ----------------------------
+    // 2FA Authentication
+    // ----------------------------
+
+    // All 2FA related functions
+    window.enable2FAandRequestPIN = function (userEmail, feedbackElement, twoStepVerificationInput) {
+        fetch('/enable_2fa', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: userEmail })
+        })
+            .then(response => response.json())
+            .then(data => {
+                feedbackElement.innerText = data.message;
+                requestPIN(userEmail, feedbackElement, twoStepVerificationInput);
+            })
+            .catch(error => {
+                feedbackElement.innerText = 'Error: ' + error.message;
+            });
+    };
+
+    window.disable2FA = function (userEmail, feedbackElement, twoStepVerificationInput) {
+        fetch('/disable_2fa', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: userEmail })
+        })
+            .then(response => response.json())
+            .then(data => {
+                displayMessageAndHide(feedbackElement, data.message);
+                twoStepVerificationInput.style.display = 'none';
+            })
+            .catch(error => {
+                displayMessageAndHide(feedbackElement, 'Error: ' + error.message);
+            });
+    };
+
+    window.requestPIN = function (userEmail, feedbackElement, twoStepVerificationInput) {
+        fetch('/setup_2fa', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: userEmail })
+        })
+            .then(response => response.json())
+            .then(data => {
+                feedbackElement.innerText = data.message;
+                twoStepVerificationInput.style.display = 'block';
+            })
+            .catch(error => {
+                feedbackElement.innerText = 'Error: ' + error.message;
+                twoStepVerificationInput.style.display = 'none';
+            });
+    };
+
+    window.verifyPIN = function (userEmail, feedbackElement, twoStepVerificationInput) {
+        const pin = document.getElementById('twoStepPin').value;
+        const verifyPinBtn = document.getElementById('verifyPinBtn'); // Get the verify button
+        if (!pin || pin.length !== 4) {
+            displayMessageAndHide(feedbackElement, 'Please enter a valid 4-digit PIN.');
+            return;
+        }
+
+        fetch('/verify_2fa', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: userEmail, pin: pin })
+        })
+            .then(response => response.json())
+            .then(data => {
+                displayMessageAndHide(feedbackElement, data.message);
+                if (data.message === '2FA verification successful!') {
+                    // Hide the PIN input, verify button, and their container upon successful verification
+                    document.getElementById('twoStepPin').style.display = 'none';
+                    verifyPinBtn.style.display = 'none';
+                    twoStepVerificationInput.style.display = 'none';
+                }
+            })
+            .catch(error => {
+                displayMessageAndHide(feedbackElement, 'Error verifying PIN: ' + error.message);
+            });
+    };
+
+    window.update2FAToggle = function () {
+        fetch('/get_2fa_status')
+            .then(response => response.json())
+            .then(data => {
+                if (data['2fa_enabled'] !== undefined) {
+                    document.getElementById('twoStepVerification').checked = data['2fa_enabled'];
+                }
+            })
+            .catch(error => console.error('Error fetching 2FA status:', error));
+    };
+
+    // ----------------------------
+    // Password Management
+    // ----------------------------
+
+    window.togglePasswordVisibility = function () {
+        const passwordInput = document.getElementById('password');
+        const togglePasswordIcon = document.getElementById('togglePasswordIcon');
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            togglePasswordIcon.className = 'bi bi-eye-slash';
+        } else {
+            passwordInput.type = 'password';
+            togglePasswordIcon.className = 'bi bi-eye';
+        }
+    };
+
+    window.toggleConfirmPasswordVisibility = function () {
+        const confirmPasswordInput = document.getElementById('confirm_password');
+        const toggleConfirmPasswordIcon = document.getElementById('toggleConfirmPasswordIcon');
+        if (confirmPasswordInput.type === 'password') {
+            confirmPasswordInput.type = 'text';
+            toggleConfirmPasswordIcon.className = 'bi bi-eye-slash';
+        } else {
+            confirmPasswordInput.type = 'password';
+            toggleConfirmPasswordIcon.className = 'bi bi-eye';
+        }
+    };
+
+    window.checkPasswordMatch = function () {
+        const password = document.getElementById('password').value;
+        const confirmPassword = document.getElementById('confirm_password').value;
+        const passwordMatchMessage = document.getElementById('passwordMatchMessage');
+
+        if (password === confirmPassword) {
+            passwordMatchMessage.style.color = 'green';
+            passwordMatchMessage.innerText = 'Passwords match';
+        } else {
+            passwordMatchMessage.style.color = 'red';
+            passwordMatchMessage.innerText = 'Passwords do not match';
+        }
+    };
+
+    window.toggleMasterPasswordVisibility = function () {
+        const passwordInput = document.getElementById('master_password');
+        const togglePasswordIcon = document.getElementById('toggleMasterPasswordIcon');
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            togglePasswordIcon.className = 'bi bi-eye-slash';
+        } else {
+            passwordInput.type = 'password';
+            togglePasswordIcon.className = 'bi bi-eye';
+        }
+    };
+
+    window.toggleConfirmMasterPasswordVisibility = function () {
+        const confirmMasterPasswordInput = document.getElementById('confirmMaster_password');
+        const toggleConfirmMasterPasswordIcon = document.getElementById('toggleConfirmMasterPasswordIcon');
+        if (confirmMasterPasswordInput.type === 'password') {
+            confirmMasterPasswordInput.type = 'text';
+            toggleConfirmMasterPasswordIcon.className = 'bi bi-eye-slash';
+        } else {
+            confirmMasterPasswordInput.type = 'password';
+            toggleConfirmMasterPasswordIcon.className = 'bi bi-eye';
+        }
+    };
+
+    window.checkMasterPasswordMatch = function () {
+        const masterPassword = document.getElementById('master_password').value;
+        const confirmMasterPassword = document.getElementById('confirmMaster_password').value;
+        const passwordMatchMessage = document.getElementById('passwordMatchMessage');
+
+        if (masterPassword === confirmMasterPassword) {
+            passwordMatchMessage.style.color = 'green';
+            passwordMatchMessage.innerText = 'Passwords match';
+        } else {
+            passwordMatchMessage.style.color = 'red';
+            passwordMatchMessage.innerText = 'Passwords do not match';
+        }
+    };
 
 
-function enable2FAandRequestPIN(userEmail, feedbackElement, twoStepVerificationInput) {
-    fetch('/enable_2fa', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ email: userEmail })
-    })
-    .then(response => response.json())
-    .then(data => {
-        feedbackElement.innerText = data.message;
-        requestPIN(userEmail, feedbackElement, twoStepVerificationInput);
-    })
-    .catch(error => {
-        feedbackElement.innerText = 'Error: ' + error.message;
-    });
-}
+// ----------------------------
+// Password Generation
+// ----------------------------
 
-function disable2FA(userEmail, feedbackElement, twoStepVerificationInput) {
-    fetch('/disable_2fa', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ email: userEmail })
-    })
-    .then(response => response.json())
-    .then(data => {
-        displayMessageAndHide(feedbackElement, data.message);
-        twoStepVerificationInput.style.display = 'none';
-    })
-    .catch(error => {
-        displayMessageAndHide(feedbackElement, 'Error: ' + error.message);
-    });
-}
+window.generatePassword = function () {
+    const phraseInput = document.getElementById('phrase-input');
+    const lengthInput = document.getElementById('length-input');
+    const generatedPasswordField = document.getElementById('generated-password');
+    const excludeNumbersCheckbox = document.getElementById('exclude_numbers');
+    const excludeSymbolsCheckbox = document.getElementById('exclude_symbols');
+    const replaceVowelsCheckbox = document.getElementById('replace_vowels');
+    const randomizeCheckbox = document.getElementById('randomize');
 
-function requestPIN(userEmail, feedbackElement, twoStepVerificationInput) {
-    fetch('/setup_2fa', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ email: userEmail })
-    })
-    .then(response => response.json())
-    .then(data => {
-        feedbackElement.innerText = data.message;
-        twoStepVerificationInput.style.display = 'block';
-    })
-    .catch(error => {
-        feedbackElement.innerText = 'Error: ' + error.message;
-        twoStepVerificationInput.style.display = 'none';
-    });
-}
+    var phrase = phraseInput.value;
+    var length = parseInt(lengthInput.value, 10);
+    var excludeNumbers = excludeNumbersCheckbox.checked;
+    var excludeSymbols = excludeSymbolsCheckbox.checked;
+    var replaceVowels = replaceVowelsCheckbox.checked;
+    var randomize = randomizeCheckbox.checked;
 
-function verifyPIN(userEmail, feedbackElement, twoStepVerificationInput) {
-    const pin = document.getElementById('twoStepPin').value;
-    const verifyPinBtn = document.getElementById('verifyPinBtn'); // Get the verify button
-    if (!pin || pin.length !== 4) {
-        displayMessageAndHide(feedbackElement, 'Please enter a valid 4-digit PIN.');
+    // If the length is smaller than the phrase or phrase is empty, show an error
+    if (!phrase || length < phrase.replace(/\s+/g, '').length) {
+        generatedPasswordField.value = "Error: Check phrase length.";
+        updateStrengthIndicator({ status: "Weak", score: 0, color: "red" });
         return;
     }
 
-    fetch('/verify_2fa', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ email: userEmail, pin: pin })
-    })
-    .then(response => response.json())
-    .then(data => {
-        displayMessageAndHide(feedbackElement, data.message);
-        if (data.message === '2FA verification successful!') {
-            // Hide the PIN input, verify button, and their container upon successful verification
-            document.getElementById('twoStepPin').style.display = 'none';
-            verifyPinBtn.style.display = 'none';
-            twoStepVerificationInput.style.display = 'none';
+    var newPassword = generatePasswordLogic(phrase, length, excludeNumbers, excludeSymbols, replaceVowels, false, randomize);
+    generatedPasswordField.value = newPassword;
+
+    checkPasswordStrength(newPassword);
+};
+
+// ----------------------------
+// Password Refresh
+// ----------------------------
+
+window.refreshPassword = function () {
+    // Get the same elements and options used in password generation
+    const phraseInput = document.getElementById('phrase-input');
+    const lengthInput = document.getElementById('length-input');
+    const generatedPasswordField = document.getElementById('generated-password');
+    const excludeNumbersCheckbox = document.getElementById('exclude_numbers');
+    const excludeSymbolsCheckbox = document.getElementById('exclude_symbols');
+    const replaceVowelsCheckbox = document.getElementById('replace_vowels');
+    const removeVowelsCheckbox = document.getElementById('remove_vowels'); // Assuming you also have this checkbox
+    const randomizeCheckbox = document.getElementById('randomize');
+
+    // Fetch current values from the input fields
+    const phrase = phraseInput.value;
+    const length = parseInt(lengthInput.value, 10);
+    const excludeNumbers = excludeNumbersCheckbox.checked;
+    const excludeSymbols = excludeSymbolsCheckbox.checked;
+    const replaceVowels = replaceVowelsCheckbox.checked;
+    const removeVowels = removeVowelsCheckbox.checked;
+    const randomize = randomizeCheckbox.checked;
+
+    // Validate the phrase and length
+    if (!phrase || length < phrase.replace(/\s+/g, '').length) {
+        generatedPasswordField.value = "Error: Check phrase length.";
+        updateStrengthIndicator({ status: "Weak", score: 0, color: "red" });
+        return;
+    }
+
+    // Generate the password using existing logic
+    const newPassword = generatePasswordLogic(phrase, length, excludeNumbers, excludeSymbols, replaceVowels, removeVowels, randomize);
+
+    // Update the generated password field
+    generatedPasswordField.value = newPassword;
+
+    // Optionally, update the password strength
+    checkPasswordStrength(newPassword);
+};
+
+// Function to dynamically update the length input based on the phrase input
+window.updateLengthInput = function () {
+    const phraseInput = document.getElementById('phrase-input');
+    const lengthInput = document.getElementById('length-input');
+
+    var phrase = phraseInput.value;
+    var minLength = phrase.replace(/\s+/g, '').length; // Remove spaces from the phrase
+    lengthInput.min = minLength;
+
+    if (lengthInput.value < minLength) {
+        lengthInput.value = minLength;
+    }
+};
+
+// Add event listener to dynamically adjust length when phrase input changes
+document.addEventListener('DOMContentLoaded', function () {
+    const phraseInput = document.getElementById('phrase-input');
+    if (phraseInput) {
+        phraseInput.addEventListener('input', updateLengthInput);
+    }
+});
+
+// Function to generate the password logic
+function generatePasswordLogic(phrase, length, excludeNumbers = false, excludeSymbols = false, replaceVowels = false, removeVowels = false, randomize = false) {
+    // Logic remains unchanged from the previous code you shared
+    // Always start with letters as the base characters
+    var characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+    // Remove spaces from the phrase
+    phrase = phrase.replace(/\s+/g, '');
+
+    // Add numbers and symbols unless excluded
+    if (!excludeNumbers) characters += "0123456789";
+    if (!excludeSymbols) characters += "!@#$%^&*()_-+=<>?/[]{}|";
+
+    // If the phrase is longer than the desired length, truncate it
+    if (!phrase || length < phrase.length) return "";
+
+    // Extended vowel map with phoneme-based replacements
+    if (replaceVowels) {
+        const vowelMap = {
+            'a': ['@', 'A', 'æ', '4', 'â', 'ä'],
+            'e': ['3', 'E', '€', 'ê', 'é', 'ë'],
+            'i': ['1', 'I', '!', 'î', 'ï', 'í'],
+            'o': ['0', 'O', 'ø', 'ô', 'ö', 'ó'],
+            'u': ['U', 'u', 'ù', 'û', 'ü', 'ú']
+        };
+
+        // Replace vowels in the phrase based on the extended vowel map
+        phrase = phrase.split('').map(function (char) {
+            return vowelMap[char.toLowerCase()] ?
+                vowelMap[char.toLowerCase()][Math.floor(Math.random() * vowelMap[char.toLowerCase()].length)]
+                : char;
+        }).join('');
+    }
+
+    // Revert numbers and symbols if they are excluded
+    if (excludeNumbers) {
+        phrase = phrase.replace(/1/g, 'i').replace(/3/g, 'e').replace(/0/g, 'o');
+    }
+    if (excludeSymbols) {
+        phrase = phrase.replace(/@/g, 'a').replace(/\$/g, 's').replace(/#/g, 'h');
+    }
+
+    // Remove vowels if the option is selected
+    if (removeVowels) {
+        phrase = phrase.replace(/[aeiou]/gi, '');
+    }
+
+    // Randomize the phrase characters if the option is selected
+    if (randomize) {
+        phrase = phrase.split('').sort(() => 0.5 - Math.random()).join('');
+    }
+
+    // Extended phoneme mapping for letters, with additional phoneme-based options
+    var phonemeMap = {
+        'a': 'A', 'b': 'B', 'c': 'C', 'd': 'D', 'e': 'E', 'f': 'F',
+        'g': 'G', 'h': 'H', 'i': 'I', 'j': 'J', 'k': 'K', 'l': 'L',
+        'm': 'M', 'n': 'N', 'o': 'O', 'p': 'P', 'q': 'Q', 'r': 'R',
+        's': 'S', 't': 'T', 'u': 'U', 'v': 'V', 'w': 'W', 'x': 'X',
+        'y': 'Y', 'z': 'Z',
+        // Phoneme-based replacements
+        'ph': 'F', 'gh': 'G', 'ch': 'C', 'sh': 'S', 'th': 'T'
+    };
+
+    // Map the phrase to its phoneme equivalents
+    var phrasePhoneme = phrase.split('').map(function (char) {
+        return phonemeMap[char.toLowerCase()] || char;
+    }).join('');
+
+    // // Extend the phrase if it's too short
+    // while (phrasePhoneme.length < length) {
+    //     let availableCharacters = characters;
+    //     if (excludeNumbers) {
+    //         availableCharacters = availableCharacters.replace(/\d/g, '');
+    //     }
+    //     if (excludeSymbols) {
+    //         availableCharacters = availableCharacters.replace(/[!@#$%^&*()\-_=+<>?{}\[\]]/g, '');
+    //     }
+    //     phrasePhoneme += availableCharacters.charAt(Math.floor(Math.random() * availableCharacters.length));
+    // }
+
+    // Generate the final password by picking characters from the phrasePhoneme
+    var password = "";
+    for (var i = 0; i < length; i++) {
+        password += phrasePhoneme[i] || characters.charAt(Math.floor(Math.random() * characters.length));
+    }
+
+    return password;
+}
+
+function updateStrengthIndicator(strength) {
+    // Implement the logic to update the strength indicator UI
+    const strengthBarInner = document.getElementById('strength-bar-inner');
+    if (strengthBarInner) {
+        strengthBarInner.style.width = (strength.score / 5) * 100 + '%';
+        strengthBarInner.style.backgroundColor = strength.color;
+    }
+
+    const strengthText = document.getElementById('strength-text');
+    if (strengthText) {
+        strengthText.textContent = strength.status;
+    }
+}
+
+    // ----------------------------
+    // Clipboard Functions
+    // ----------------------------
+
+    window.copyWebsite = function () {
+        var field = document.getElementById('website-input');
+        field.select();
+        document.execCommand('copy');
+        changeIconTemporarily('website-icon');
+    };
+
+    window.copyEmail = function () {
+        var field = document.getElementById('email-input');
+        field.select();
+        document.execCommand('copy');
+        changeIconTemporarily('email-icon');
+    };
+
+    window.copyPassword = function () {
+        var field = document.getElementById('password-input');
+        field.select();
+        document.execCommand('copy');
+        changeIconTemporarily('password-icon');
+    };
+
+    function changeIconTemporarily(iconId) {
+        var icon = document.getElementById(iconId);
+        if (icon) {
+            icon.className = 'bi bi-clipboard-check';
+
+            setTimeout(function () {
+                icon.className = 'bi bi-clipboard';
+            }, 2000); // Reset icon after 2 seconds
         }
-    })
-    .catch(error => {
-        displayMessageAndHide(feedbackElement, 'Error verifying PIN: ' + error.message);
-    });
-}
+    }
 
+    // ----------------------------
+    // Account Deletion
+    // ----------------------------
 
-function displayMessageAndHide(feedbackElement, message, delay = 3500) {
-    feedbackElement.innerText = message;
-    setTimeout(() => {
-        feedbackElement.innerText = '';
-    }, delay);
-}
-
-function update2FAToggle() {
-    fetch('/get_2fa_status')
-    .then(response => response.json())
-    .then(data => {
-        if (data['2fa_enabled'] !== undefined) {
-            document.getElementById('twoStepVerification').checked = data['2fa_enabled'];
+    window.deleteAccount = function () {
+        if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+            fetch('/delete_account', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'same-origin'
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                        window.location.href = '/';
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(error => console.error('Error:', error));
         }
-    })
-    .catch(error => console.error('Error fetching 2FA status:', error));
-}
+    };
 
-function deleteAccount() {
-    if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
-        fetch('/delete_account', {
+    // ----------------------------
+    // Family Account Management
+    // ----------------------------
+
+    window.showFamilyAccountInput = function () {
+        var familyAccountInput = document.getElementById('familyAccountInput');
+        if (familyAccountInput) {
+            familyAccountInput.style.display = familyAccountInput.style.display === 'none' || familyAccountInput.style.display === '' ? 'block' : 'none';
+        }
+    };
+
+    window.addFamilyAccount = function () {
+        var familyEmail = document.getElementById('familyEmail').value;
+
+        fetch('/add_family_account', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            credentials: 'same-origin'
+            body: JSON.stringify({ email: familyEmail })
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert(data.message);
-                window.location.href = '/';
-            } else {
-                alert(data.message);
-            }
-        })
-        .catch(error => console.error('Error:', error));
-    }
-}
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert("Request sent successfully!");
+                    document.getElementById('familyAccountInput').style.display = 'none';
+                } else {
+                    alert("Error: " + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    };
 
-// Show the family account input field
-function showFamilyAccountInput() {
-    var familyAccountInput = document.getElementById('familyAccountInput');
-    if (familyAccountInput.style.display === 'none' || familyAccountInput.style.display === '') {
-        familyAccountInput.style.display = 'block';
-    } else {
-        familyAccountInput.style.display = 'none';
-    }
-}
+    // ----------------------------
+    // Alert Dismissal
+    // ----------------------------
 
-// Add family account function
-function addFamilyAccount() {
-    var familyEmail = document.getElementById('familyEmail').value;
-
-    fetch('/add_family_account', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ email: familyEmail })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert("Request sent successfully!");
-            document.getElementById('familyAccountInput').style.display = 'none';
-        } else {
-            alert("Error: " + data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-    });
-}
-
-
-
-
-
-document.addEventListener('DOMContentLoaded', function () {
-    const alerts = document.querySelectorAll('.alert-dismissible');
-    alerts.forEach(function (alert) {
-        setTimeout(function () {
-            alert.style.opacity = '0';
+    window.dismissAlerts = function () {
+        const alerts = document.querySelectorAll('.alert-dismissible');
+        alerts.forEach(function (alert) {
             setTimeout(function () {
-                alert.remove();
-            }, 500);
-        }, 3000); // 3s before starting the fade out
-    });
-});
+                alert.style.opacity = '0';
+                setTimeout(function () {
+                    alert.remove();
+                }, 500);
+            }, 3000); // 3s before starting the fade out
+        });
+    };
 
-document.addEventListener("DOMContentLoaded", function() {
-    const form = document.querySelector("form");
-    form.addEventListener("submit", function(event) {
+    // ----------------------------
+    // Form Submission and Validation
+    // ----------------------------
+
+    window.validateForm = function (event) {
         const email = document.getElementById("email").value;
         const password = document.getElementById("password").value;
         if (!email || !password) {
             alert("Email and password are required!");
             event.preventDefault();
         }
-    });
-
-    // Check the initial password strength
-    var initialPassword = document.getElementById('generated-password').value;
-    if (initialPassword) {
-        checkPasswordStrength(initialPassword);
-    }
-});
-
-document.getElementById('generated-password').addEventListener('input', function() {
-    var password = document.getElementById('generated-password').value;
-    var strength = checkPasswordStrength(password);
-    updateStrengthIndicator(strength);
-});
-
-
-//login & signup password toggle button//
-function togglePasswordVisibility() {
-    const passwordInput = document.getElementById('password');
-    const togglePasswordIcon = document.getElementById('togglePasswordIcon');
-    if (passwordInput.type === 'password') {
-        passwordInput.type = 'text';
-        togglePasswordIcon.className = 'bi bi-eye-slash';
-    } else {
-        passwordInput.type = 'password';
-        togglePasswordIcon.className = 'bi bi-eye';
-    }
-}
-
-function toggleConfirmPasswordVisibility() {
-    const confirmPasswordInput = document.getElementById('confirm_password');
-    const toggleConfirmPasswordIcon = document.getElementById('toggleConfirmPasswordIcon');
-    if (confirmPasswordInput.type === 'password') {
-        confirmPasswordInput.type = 'text';
-        toggleConfirmPasswordIcon.className = 'bi bi-eye-slash';
-    } else {
-        confirmPasswordInput.type = 'password';
-        toggleConfirmPasswordIcon.className = 'bi bi-eye';
-    }
-}
-
-function checkPasswordMatch() {
-    const password = document.getElementById('password').value;
-    const confirmPassword = document.getElementById('confirm_password').value;
-    const passwordMatchMessage = document.getElementById('passwordMatchMessage');
-
-    if (password === confirmPassword) {
-        passwordMatchMessage.style.color = 'green';
-        passwordMatchMessage.innerText = 'Passwords match';
-    } else {
-        passwordMatchMessage.style.color = 'red';
-        passwordMatchMessage.innerText = 'Passwords do not match';
-    }
-}
-
-
-//master password toggle//
-function toggleMasterPasswordVisibility() {
-    const passwordInput = document.getElementById('master_password');
-    const togglePasswordIcon = document.getElementById('toggleMasterPasswordIcon');
-    if (passwordInput.type === 'password') {
-        passwordInput.type = 'text';
-        togglePasswordIcon.className = 'bi bi-eye-slash';
-    } else {
-        passwordInput.type = 'password';
-        togglePasswordIcon.className = 'bi bi-eye';
-    }
-}
-
-
-function toggleConfirmMasterPasswordVisibility() {
-    const confirmMasterPasswordInput = document.getElementById('confirmMaster_password');
-    const toggleConfirmMasterPasswordIcon = document.getElementById('toggleConfirmMasterPasswordIcon');
-    if (confirmMasterPasswordInput.type === 'password') {
-        confirmMasterPasswordInput.type = 'text';
-        toggleConfirmMasterPasswordIcon.className = 'bi bi-eye-slash';
-    } else {
-        confirmMasterPasswordInput.type = 'password';
-        toggleConfirmMasterPasswordIcon.className = 'bi bi-eye';
-    }
-}
-
-function checkMasterPasswordMatch() {
-    const masterPassword = document.getElementById('master_password').value;
-    const confirmMasterPassword = document.getElementById('confirmMaster_password').value;
-    const passwordMatchMessage = document.getElementById('passwordMatchMessage');
-
-    if (masterPassword === confirmMasterPassword) {
-        passwordMatchMessage.style.color = 'green';
-        passwordMatchMessage.innerText = 'Passwords match';
-    } else {
-        passwordMatchMessage.style.color = 'red';
-        passwordMatchMessage.innerText = 'Passwords do not match';
-    }
-}
-
-
-
-
-
-//generate passwords
-document.addEventListener('DOMContentLoaded', function () {
-    // Check if elements exist before using them
-    const phraseInput = document.getElementById('phrase-input');
-    const lengthInput = document.getElementById('length-input');
-    const generatedPasswordField = document.getElementById('generated-password');
-    const clipboardButton = document.getElementById('clipboard-button');
-    const excludeNumbersCheckbox = document.getElementById('exclude_numbers');
-    const excludeSymbolsCheckbox = document.getElementById('exclude_symbols');
-    const replaceVowelsCheckbox = document.getElementById('replace_vowels');
-    const randomizeCheckbox = document.getElementById('randomize');
-
-// Refresh and generate a new password
-    function refreshPassword() {
-        var phrase = phraseInput.value;
-        var length = parseInt(lengthInput.value, 10);
-        var excludeNumbers = excludeNumbersCheckbox.checked;
-        var excludeSymbols = excludeSymbolsCheckbox.checked;
-        var replaceVowels = replaceVowelsCheckbox.checked;
-        var randomize = randomizeCheckbox.checked;
-
-        var newPassword = generatePassword(phrase, length, excludeNumbers, excludeSymbols, replaceVowels, false, randomize);
-        generatedPasswordField.value = newPassword;
-
-        checkPasswordStrength(newPassword);
-    }
-
-    if (phraseInput) {
-        // Update length input based on phrase length
-        phraseInput.addEventListener('input', updateLengthInput);
-    }
-
-    if (clipboardButton) {
-        clipboardButton.addEventListener('click', copyToClipboard);
-    }
-
-    if (replaceVowelsCheckbox) {
-        replaceVowelsCheckbox.addEventListener('change', handleReplaceVowelsToggle);
-    }
-
-    // Function to update length input based on the phrase length
-    function updateLengthInput() {
-        var phrase = phraseInput.value;
-        var minLength = phrase.replace(/\s+/g, '').length; // Minimum length without spaces
-        lengthInput.min = minLength;
-
-        if (lengthInput.value < minLength) {
-            lengthInput.value = minLength; // Adjust if current value is less than minLength
-        }
-    }
-
-    // Function to update the strength indicator based on the strength score
-    function updateStrengthIndicator(strength) {
-        const strengthBarInner = document.getElementById('strength-bar-inner');
-        if (strengthBarInner) {
-            strengthBarInner.style.width = (strength.score / 5) * 100 + '%';
-            strengthBarInner.style.backgroundColor = strength.color;
-        }
-
-        const strengthText = document.getElementById('strength-text');
-        if (strengthText) {
-            strengthText.textContent = strength.status;
-        }
-    }
-
-    // Function to check the strength of the generated password
-    function checkPasswordStrength(password) {
-        var strength = { status: 'Weak', score: 0, color: 'red' };
-
-        if (password.length >= 12) strength.score += 1;
-        else if (password.length >= 8) strength.score += 0.5;
-
-        if (/[0-9]/.test(password)) strength.score += 1;
-        if (/[A-Z]/.test(password) && /[a-z]/.test(password)) strength.score += 1;
-        if (/[^A-Za-z0-9]/.test(password)) strength.score += 1;
-        if (/[A-Za-z]/.test(password) && (/[0-9]/.test(password) || /[^A-Za-z0-9]/.test(password))) {
-            strength.score += 1;
-        }
-
-        if (strength.score >= 5) {
-            strength.status = 'Very Strong';
-            strength.color = 'green';
-        } else if (strength.score >= 4) {
-            strength.status = 'Strong';
-            strength.color = 'lightgreen';
-        } else if (strength.score >= 3) {
-            strength.status = 'Moderate';
-            strength.color = 'orange';
-        }
-
-        updateStrengthIndicator(strength);
-    }
-
-    // Function to copy the generated password to the clipboard
-    function copyToClipboard() {
-        var passwordField = generatedPasswordField;
-        passwordField.select();
-        navigator.clipboard.writeText(passwordField.value).then(() => {
-            document.getElementById('clipboard-icon').className = 'bi bi-clipboard-check';
-            setTimeout(function () {
-                document.getElementById('clipboard-icon').className = 'bi bi-clipboard';
-            }, 2000); // 2 seconds
-        }).catch(err => {
-            console.error('Failed to copy text: ', err);
-        });
-    }
-
-    // Function to generate a password using provided options
-    function generatePassword(phrase, length, excludeNumbers = false, excludeSymbols = false, replaceVowels = false, removeVowels = false, randomize = false) {
-        var characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        phrase = phrase.replace(/\s+/g, ''); // Remove spaces
-
-        if (!excludeNumbers) characters += "0123456789";
-        if (!excludeSymbols) characters += "!@#$%^&*()_-+=<>?/[]{}|";
-
-        if (!phrase || length < phrase.length) return ""; // Ensure minimum length
-
-        if (replaceVowels) {
-            phrase = phrase.split('').map(function (char) {
-                switch (char) {
-                    case 'a': return Math.random() < 0.5 ? '@' : 'A';
-                    case 'e': return Math.random() < 0.5 ? '3' : 'E';
-                    case 'i': return Math.random() < 0.5 ? '1' : 'I';
-                    case 'o': return Math.random() < 0.5 ? '0' : 'O';
-                    case 'u': return Math.random() < 0.5 ? 'U' : 'u';
-                    default: return char;
-                }
-            }).join('');
-        }
-
-        if (excludeNumbers) {
-            phrase = phrase.replace(/1/g, 'i').replace(/3/g, 'e').replace(/0/g, 'o');
-        }
-
-        if (excludeSymbols) {
-            phrase = phrase.replace(/@/g, 'a').replace(/&/g, 'a').replace(/\$/g, 's').replace(/#/g, 'h');
-        }
-
-        if (removeVowels) {
-            phrase = phrase.replace(/[aeiou]/g, '');
-        }
-
-        if (randomize) {
-            phrase = phrase.split('').sort(() => 0.5 - Math.random()).join('');
-        }
-
-        var phonemeMap = {
-            'a': 'A', 'e': 'E', 'i': 'I', 'o': 'O', 'u': 'U',
-            'b': 'B', 'c': 'C', 'd': 'D', 'f': 'F', 'g': 'G',
-            'h': 'H', 'j': 'J', 'k': 'K', 'l': 'L', 'm': 'M',
-            'n': 'N', 'p': 'P', 'q': 'Q', 'r': 'R', 's': 'S',
-            't': 'T', 'v': 'V', 'w': 'W', 'x': 'X', 'y': 'Y', 'z': 'Z'
-        };
-
-        var phrasePhoneme = phrase.split('').map(function (char) {
-            return phonemeMap[char] || char;
-        }).join('');
-
-        while (phrasePhoneme.length < length) {
-            phrasePhoneme += characters.charAt(Math.floor(Math.random() * characters.length));
-        }
-
-        var password = "";
-        for (var i = 0; i < length; i++) {
-            if (i < phrasePhoneme.length) {
-                password += phrasePhoneme[i];
-            } else {
-                password += characters.charAt(Math.floor(Math.random() * characters.length));
-            }
-        }
-
-        return password;
-    }
-
-    // Handle the replace vowels toggle
-    function handleReplaceVowelsToggle() {
-        if (replaceVowelsCheckbox.checked) {
-            excludeNumbersCheckbox.checked = false;
-            excludeSymbolsCheckbox.checked = false;
-        }
-    }
-});
-
-
-
-function copyWebsite() {
-    var field = document.getElementById('website-input');
-    field.select();
-    document.execCommand('copy');
-    changeIconTemporarily('website-icon');
-}
-
-function copyEmail() {
-    var field = document.getElementById('email-input');
-    field.select();
-    document.execCommand('copy');
-    changeIconTemporarily('email-icon');
-}
-
-function copyPassword() {
-    var field = document.getElementById('password-input');
-    field.select();
-    document.execCommand('copy');
-    changeIconTemporarily('password-icon');
-}
-
-function changeIconTemporarily(iconId) {
-    var icon = document.getElementById(iconId);
-    icon.className = 'bi bi-clipboard-check';
-
-    setTimeout(function () {
-        icon.className = 'bi bi-clipboard';
-    }, 2000); // Reset icon after 2 seconds
-}
-
-function toggleNewPasswordVisibility() {
-    const passwordInput = document.getElementById('newPassword');
-    const togglePasswordIcon = document.getElementById('toggleNewPasswordIcon');
-    if (passwordInput.type === 'password') {
-        passwordInput.type = 'text';
-        togglePasswordIcon.className = 'bi bi-eye-slash';
-    } else {
-        passwordInput.type = 'password';
-        togglePasswordIcon.className = 'bi bi-eye';
-    }
-}
-
-function toggleConfirmNewPasswordVisibility() {
-    const passwordInput = document.getElementById('confirmNewPassword');
-    const togglePasswordIcon = document.getElementById('toggleConfirmNewPasswordIcon');
-    if (passwordInput.type === 'password') {
-        passwordInput.type = 'text';
-        togglePasswordIcon.className = 'bi bi-eye-slash';
-    } else {
-        passwordInput.type = 'password';
-        togglePasswordIcon.className = 'bi bi-eye';
-    }
-}
-
-
-
-function checkNewPasswordMatch() {
-    const masterPassword = document.getElementById('newPassword').value;
-    const confirmMasterPassword = document.getElementById('confirmNewPassword').value;
-    const passwordMatchMessage = document.getElementById('passwordMatchMessage');
-
-    if (masterPassword === confirmMasterPassword) {
-        passwordMatchMessage.style.color = 'green';
-        passwordMatchMessage.innerText = 'Passwords match';
-    } else {
-        passwordMatchMessage.style.color = 'red';
-        passwordMatchMessage.innerText = 'Passwords do not match';
-    }
-}
-
-//passwordList
-function deleteEntry(website, email, password) {
-    if (confirm('Are you sure you want to delete this entry?')) {
-        fetch('/delete-password', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({website: website, email: email, password: password})
-        }).then(response => {
-            if (response.ok) {
-                alert('Entry deleted successfully');
-                window.location.reload();
-            } else {
-                alert('Failed to delete entry');
-            }
-        });
-    }
-}
-
-
-//animal ID
-function toggleSubmitButton() {
-            const submitButton = document.getElementById('submit-button');
-            const radioButtons = document.querySelectorAll('input[name="animal"]');
-            let isChecked = false;
-            radioButtons.forEach((radio) => {
-                if (radio.checked) {
-                    isChecked = true;
+    };
+
+    // ----------------------------
+    // Password List Management
+    // ----------------------------
+
+    window.deleteEntry = function (website, email, password) {
+        if (confirm('Are you sure you want to delete this entry?')) {
+            fetch('/delete-password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ website: website, email: email, password: password })
+            }).then(response => {
+                if (response.ok) {
+                    alert('Entry deleted successfully');
+                    window.location.reload();
+                } else {
+                    alert('Failed to delete entry');
                 }
             });
+        }
+    };
+
+    // ----------------------------
+    // Animal ID Functionality
+    // ----------------------------
+
+    window.toggleSubmitButton = function () {
+        const submitButton = document.getElementById('submit-button');
+        const radioButtons = document.querySelectorAll('input[name="animal"]');
+        let isChecked = false;
+        radioButtons.forEach((radio) => {
+            if (radio.checked) {
+                isChecked = true;
+            }
+        });
+        if (submitButton) {
             submitButton.disabled = !isChecked;
         }
+    };
 
-function toggleSecurityCheckButton() {
+    window.toggleSecurityCheckButton = function () {
         const checkBox = document.getElementById('securityCheck');
         const submitButton = document.getElementById('confirmButton');
-        submitButton.disabled = !checkBox.checked;
+        if (submitButton && checkBox) {
+            submitButton.disabled = !checkBox.checked;
+        }
+    };
+
+    window.preventImageClickPropagation = function () {
+        var img = document.querySelector('.animal-img');
+        if (img) {
+            img.addEventListener('click', function (event) {
+                event.stopPropagation();
+            });
+        }
+    };
+
+    // ----------------------------
+    // Event Listeners Initialization
+    // ----------------------------
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // Initialize Field Management (if needed)
+        // Initialize Account Locking UI
+        initializeLockingUI();
+
+        // Initialize 2FA Toggle State
+        update2FAToggle();
+
+        // Initialize Password Strength (if applicable)
+        var initialPassword = document.getElementById('generated-password')?.value;
+        if (initialPassword) {
+            checkPasswordStrength(initialPassword);
+        }
+
+        // Initialize Alert Dismissal
+        dismissAlerts();
+
+        // Initialize Animal Image Click Prevention
+        preventImageClickPropagation();
+
+        // Form Submission Validation
+        const form = document.querySelector("form");
+        if (form) {
+            form.addEventListener("submit", validateForm);
+        }
+
+        // Password Generation Event Listeners
+        const generatedPasswordField = document.getElementById('generated-password');
+        if (generatedPasswordField) {
+            generatedPasswordField.addEventListener('input', function () {
+                var password = generatedPasswordField.value;
+                var strength = checkPasswordStrength(password);
+                updateStrengthIndicator(strength);
+            });
+        }
+
+        // Initialize Locking UI based on saved state
+        initializeLockingState();
+    });
+
+    // ----------------------------
+    // Account Locking UI Initialization
+    // ----------------------------
+
+    function initializeLockingUI() {
+        const lockSwitch = document.getElementById('lockSwitch');
+        const lockRange = document.getElementById('lockRange');
+        const lockRangeLabel = document.getElementById('lockRangeLabel');
+        const unlockForm = document.getElementById('unlockForm');
+        const toggleLockBtn = document.getElementById('toggleLockBtn');
+        const masterPasswordInput = document.getElementById('masterPasswordInput');
+        const toggleLockVisibilityBtn = document.getElementById('toggleLockVisibilityBtn');
+        const toggleLockVisibilityIcon = document.getElementById('toggleLockVisibilityIcon');
+        const unlockAccountBtn = document.getElementById('unlockAccountBtn');
+
+        if (unlockAccountBtn) {
+            unlockAccountBtn.addEventListener('click', unlockAccount);
+        }
+
+        function updateRangeLabel() {
+            const rangeValue = lockRange.value;
+            lockRangeLabel.innerText = rangeValue * 10 + ' minutes';
+        }
+
+        lockRange.addEventListener('input', updateRangeLabel);
+
+        const savedLockState = localStorage.getItem('lockState');
+        const savedUnlockTime = localStorage.getItem('unlockTime');
+
+        if (savedLockState === 'locked' && savedUnlockTime && new Date(savedUnlockTime) > new Date()) {
+            if (lockSwitch) lockSwitch.checked = true;
+            if (lockRange) lockRange.disabled = true;
+            if (toggleLockBtn) {
+                toggleLockBtn.disabled = false;
+                toggleLockBtn.textContent = 'UNLOCK ACCOUNT';
+            }
+            if (unlockForm) unlockForm.style.display = 'none';
+            if (savedUnlockTime) {
+                startCountdown(new Date(savedUnlockTime) - new Date());
+            }
+        } else {
+            resetLockUI();
+        }
+
+        if (lockSwitch) {
+            lockSwitch.addEventListener('change', function () {
+                if (lockRange) lockRange.disabled = !this.checked;
+                if (toggleLockBtn) toggleLockBtn.disabled = !this.checked;
+                if (!this.checked) {
+                    if (toggleLockBtn) toggleLockBtn.textContent = 'LOCK ACCOUNT';
+                    if (unlockForm) unlockForm.style.display = 'none';
+                    localStorage.removeItem('lockState');
+                    localStorage.removeItem('unlockTime');
+                    if (globalTimerInterval) {
+                        clearInterval(globalTimerInterval);
+                        globalTimerInterval = null;
+                    }
+                }
+            });
+        }
+
+        if (toggleLockBtn) {
+            toggleLockBtn.addEventListener('click', function () {
+                if (this.textContent.trim() === 'LOCK ACCOUNT') {
+                    const lockDuration = lockRange.value * 10;
+                    lockAccount(lockDuration);
+                } else {
+                    if (unlockForm) {
+                        unlockForm.style.display = unlockForm.style.display === 'none' ? 'block' : 'none';
+                        this.textContent = unlockForm.style.display === 'block' ? 'CANCEL UNLOCK' : 'LOCK ACCOUNT';
+                    }
+                }
+            });
+        }
+
+        if (masterPasswordInput) {
+            masterPasswordInput.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter') {
+                    unlockAccount();
+                }
+            });
+        }
+
+        if (toggleLockVisibilityBtn) {
+            toggleLockVisibilityBtn.addEventListener('click', function () {
+                const type = masterPasswordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                masterPasswordInput.setAttribute('type', type);
+                toggleLockVisibilityIcon.classList.toggle('bi-eye-slash');
+                toggleLockVisibilityIcon.classList.toggle('bi-eye');
+            });
+        }
     }
 
-document.addEventListener('DOMContentLoaded', function() {
-    var img = document.querySelector('.animal-img');
-    if (img) {
-        img.addEventListener('click', function(event) {
-            event.stopPropagation();
-        });
+    function initializeLockingState() {
+        // Any additional initialization for locking can go here
     }
-})
+
+    // ----------------------------
+    // 2FA Event Listeners Initialization
+    // ----------------------------
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const twoStepVerificationCheckbox = document.getElementById('twoStepVerification');
+        const twoStepVerificationInput = document.getElementById('twoStepVerificationInput');
+        const verifyPinBtn = document.getElementById('verifyPinBtn');
+        const feedbackElement = document.getElementById('twoStepFeedback');
+        const userEmailElement = document.getElementById('userEmail');
+        const userEmail = userEmailElement ? userEmailElement.textContent : '';
+
+        if (twoStepVerificationCheckbox) {
+            twoStepVerificationCheckbox.addEventListener('change', function () {
+                if (this.checked) {
+                    enable2FAandRequestPIN(userEmail, feedbackElement, twoStepVerificationInput);
+                } else {
+                    disable2FA(userEmail, feedbackElement, twoStepVerificationInput);
+                }
+            });
+        }
+
+        if (verifyPinBtn) {
+            verifyPinBtn.addEventListener('click', function () {
+                verifyPIN(userEmail, feedbackElement, twoStepVerificationInput);
+            });
+        }
+    });
+
+    // ----------------------------
+    // Additional Event Listeners
+    // ----------------------------
+
+    document.addEventListener("DOMContentLoaded", function () {
+        // Any additional DOMContentLoaded initializations can go here
+    });
+
+})();
+
 
