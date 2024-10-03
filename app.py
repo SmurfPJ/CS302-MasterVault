@@ -160,11 +160,15 @@ def check_password_strength(password):
     if not password:
         return strength
 
-    # Length check: More than 12 characters is considered stronger for passphrases
-    if len(password) >= 12:
-        strength['score'] += 1
+    # Length check: reward longer passwords
+    if len(password) >= 15:
+        strength['score'] += 2  # Longer than 15 is considered very strong
+    elif len(password) >= 12:
+        strength['score'] += 1.5
     elif len(password) >= 8:
-        strength['score'] += 0.5
+        strength['score'] += 1
+    else:
+        strength['score'] += 0.5  # Penalize shorter passwords
 
     # Check for digits
     if any(char.isdigit() for char in password):
@@ -174,13 +178,31 @@ def check_password_strength(password):
     if any(char.isupper() for char in password) and any(char.islower() for char in password):
         strength['score'] += 1
 
-    # Check for symbols
+    # Check for special characters (symbols)
     if any(char in string.punctuation for char in password):
         strength['score'] += 1
 
-    # Check for the presence of both letters and numbers/symbols
-    if any(char.isalpha() for char in password) and (any(char.isdigit() for char in password) or any(char in string.punctuation for char in password)):
+    # Check for a mix of letters, numbers, and symbols
+    if (any(char.isalpha() for char in password) and
+            (any(char.isdigit() for char in password) or any(char in string.punctuation for char in password))):
         strength['score'] += 1
+
+    # Penalize for common patterns like "123", "abc", or repeating characters
+    common_patterns = ['123', 'password', 'abc', 'qwerty']
+    if any(pattern in password.lower() for pattern in common_patterns):
+        strength['score'] -= 1
+
+    # Penalize for consecutive identical characters
+    if any(password[i] == password[i+1] == password[i+2] for i in range(len(password) - 2)):
+        strength['score'] -= 1
+
+    # Penalize for too many repeated characters
+    char_count = {char: password.count(char) for char in set(password)}
+    if any(count > len(password) // 2 for count in char_count.values()):
+        strength['score'] -= 1
+
+    # Adjust score boundaries
+    strength['score'] = max(0, strength['score'])  # Ensure score doesn't go below 0
 
     # Update status and color based on score
     if strength['score'] >= 5:
@@ -219,7 +241,6 @@ def handle_create_password():
     exclude_numbers = 'exclude_numbers' in request.form
     exclude_symbols = 'exclude_symbols' in request.form
     replace_vowels = 'replace_vowels' in request.form
-    remove_vowels = 'remove_vowels' in request.form
     randomize = 'randomize' in request.form
 
     # Validate options and generate password
@@ -227,7 +248,7 @@ def handle_create_password():
         error = "Please enter a phrase."
     else:
         password = generate_password(phrase, length, exclude_numbers, exclude_symbols, replace_vowels,
-                                     remove_vowels, randomize)
+                                    randomize)
         strength = check_password_strength(password)
         if not password:
             error = "Failed to generate password. Ensure the phrase is shorter than the desired password length."
@@ -235,7 +256,7 @@ def handle_create_password():
     # Render the same template with new data
     return render_template('createPassword.html', password=password, strength=strength, error=error, phrase=phrase,
                            length=length, exclude_numbers=exclude_numbers, exclude_symbols=exclude_symbols,
-                           replace_vowels=replace_vowels, remove_vowels=remove_vowels, randomize=randomize)
+                           replace_vowels=replace_vowels, randomize=randomize)
 
 
 

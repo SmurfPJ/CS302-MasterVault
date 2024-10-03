@@ -410,7 +410,7 @@ window.generatePassword = function () {
         return;
     }
 
-    var newPassword = generatePasswordLogic(phrase, length, excludeNumbers, excludeSymbols, replaceVowels, false, randomize);
+    var newPassword = generatePasswordLogic(phrase, length, excludeNumbers, excludeSymbols, replaceVowels, randomize);
     generatedPasswordField.value = newPassword;
 
     checkPasswordStrength(newPassword);
@@ -421,41 +421,37 @@ window.generatePassword = function () {
 // ----------------------------
 
 window.refreshPassword = function () {
-    // Get the same elements and options used in password generation
     const phraseInput = document.getElementById('phrase-input');
     const lengthInput = document.getElementById('length-input');
     const generatedPasswordField = document.getElementById('generated-password');
     const excludeNumbersCheckbox = document.getElementById('exclude_numbers');
     const excludeSymbolsCheckbox = document.getElementById('exclude_symbols');
     const replaceVowelsCheckbox = document.getElementById('replace_vowels');
-    const removeVowelsCheckbox = document.getElementById('remove_vowels'); // Assuming you also have this checkbox
     const randomizeCheckbox = document.getElementById('randomize');
 
-    // Fetch current values from the input fields
     const phrase = phraseInput.value;
     const length = parseInt(lengthInput.value, 10);
     const excludeNumbers = excludeNumbersCheckbox.checked;
     const excludeSymbols = excludeSymbolsCheckbox.checked;
     const replaceVowels = replaceVowelsCheckbox.checked;
-    const removeVowels = removeVowelsCheckbox.checked;
     const randomize = randomizeCheckbox.checked;
 
-    // Validate the phrase and length
     if (!phrase || length < phrase.replace(/\s+/g, '').length) {
         generatedPasswordField.value = "Error: Check phrase length.";
-        updateStrengthIndicator({ status: "Weak", score: 0, color: "red" });
         return;
     }
 
-    // Generate the password using existing logic
-    const newPassword = generatePasswordLogic(phrase, length, excludeNumbers, excludeSymbols, replaceVowels, removeVowels, randomize);
-
-    // Update the generated password field
+    const newPassword = generatePasswordLogic(phrase, length, excludeNumbers, excludeSymbols, replaceVowels, randomize);
     generatedPasswordField.value = newPassword;
-
-    // Optionally, update the password strength
-    checkPasswordStrength(newPassword);
 };
+
+document.addEventListener('DOMContentLoaded', function () {
+    const refreshButton = document.querySelector('.refreshButton');
+    if (refreshButton) {
+        refreshButton.addEventListener('click', refreshPassword);
+    }
+});
+
 
 // Function to dynamically update the length input based on the phrase input
 window.updateLengthInput = function () {
@@ -479,9 +475,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 });
 
-// Function to generate the password logic
-function generatePasswordLogic(phrase, length, excludeNumbers = false, excludeSymbols = false, replaceVowels = false, removeVowels = false, randomize = false) {
-    // Logic remains unchanged from the previous code you shared
+function generatePasswordLogic(phrase, length, excludeNumbers = false, excludeSymbols = false, replaceVowels = false, randomize = false) {
     // Always start with letters as the base characters
     var characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
@@ -521,17 +515,12 @@ function generatePasswordLogic(phrase, length, excludeNumbers = false, excludeSy
         phrase = phrase.replace(/@/g, 'a').replace(/\$/g, 's').replace(/#/g, 'h');
     }
 
-    // Remove vowels if the option is selected
-    if (removeVowels) {
-        phrase = phrase.replace(/[aeiou]/gi, '');
-    }
-
     // Randomize the phrase characters if the option is selected
     if (randomize) {
         phrase = phrase.split('').sort(() => 0.5 - Math.random()).join('');
     }
 
-    // Extended phoneme mapping for letters, with additional phoneme-based options
+    // Map the phrase to its phoneme equivalents
     var phonemeMap = {
         'a': 'A', 'b': 'B', 'c': 'C', 'd': 'D', 'e': 'E', 'f': 'F',
         'g': 'G', 'h': 'H', 'i': 'I', 'j': 'J', 'k': 'K', 'l': 'L',
@@ -547,44 +536,217 @@ function generatePasswordLogic(phrase, length, excludeNumbers = false, excludeSy
         return phonemeMap[char.toLowerCase()] || char;
     }).join('');
 
-    // // Extend the phrase if it's too short
-    // while (phrasePhoneme.length < length) {
-    //     let availableCharacters = characters;
-    //     if (excludeNumbers) {
-    //         availableCharacters = availableCharacters.replace(/\d/g, '');
-    //     }
-    //     if (excludeSymbols) {
-    //         availableCharacters = availableCharacters.replace(/[!@#$%^&*()\-_=+<>?{}\[\]]/g, '');
-    //     }
-    //     phrasePhoneme += availableCharacters.charAt(Math.floor(Math.random() * availableCharacters.length));
-    // }
-
     // Generate the final password by picking characters from the phrasePhoneme
-    var password = "";
-    for (var i = 0; i < length; i++) {
-        password += phrasePhoneme[i] || characters.charAt(Math.floor(Math.random() * characters.length));
-    }
+    // Prevent extra characters from being added
+    var password = phrasePhoneme.slice(0, length);
 
     return password;
 }
 
+
+document.addEventListener('DOMContentLoaded', function () {
+    const passwordInput = document.getElementById('generated-password'); // The password field
+    const phraseInput = document.getElementById('phrase-input'); // The phrase input field
+    const lengthInput = document.getElementById('length-input'); // The length input field
+
+    // Listen for changes in the generated password
+    if (passwordInput) {
+        passwordInput.addEventListener('input', function () {
+            const password = passwordInput.value;
+            checkPasswordStrength(password);
+        });
+    }
+
+    // Listen for changes in the phrase input and regenerate the password
+    if (phraseInput) {
+        phraseInput.addEventListener('input', function () {
+            updateLengthInput(); // Dynamically adjust the length based on the phrase
+            refreshPassword(); // Regenerate the password when the phrase changes
+        });
+    }
+});
+
+// Dynamically update the length input based on the phrase input
+window.updateLengthInput = function () {
+    const phraseInput = document.getElementById('phrase-input');
+    const lengthInput = document.getElementById('length-input');
+
+    const phrase = phraseInput.value;
+    const minLength = phrase.replace(/\s+/g, '').length; // Remove spaces and calculate the length of the phrase
+    lengthInput.value = minLength; // Automatically set the length input value based on the phrase length
+};
+
+// Dynamically regenerate and check password strength
+window.refreshPassword = function () {
+    const phraseInput = document.getElementById('phrase-input');
+    const lengthInput = document.getElementById('length-input');
+    const generatedPasswordField = document.getElementById('generated-password');
+
+    const excludeNumbersCheckbox = document.getElementById('exclude_numbers');
+    const excludeSymbolsCheckbox = document.getElementById('exclude_symbols');
+    const replaceVowelsCheckbox = document.getElementById('replace_vowels');
+    const randomizeCheckbox = document.getElementById('randomize');
+
+    const phrase = phraseInput.value;
+    const length = parseInt(lengthInput.value, 10);
+    const excludeNumbers = excludeNumbersCheckbox.checked;
+    const excludeSymbols = excludeSymbolsCheckbox.checked;
+    const replaceVowels = replaceVowelsCheckbox.checked;
+    const randomize = randomizeCheckbox.checked;
+
+    // Validate the phrase and length
+    if (!phrase || length < phrase.replace(/\s+/g, '').length) {
+        generatedPasswordField.value = "Error: Check phrase length.";
+        updateStrengthIndicator({ status: "Weak", score: 0, color: "red" });
+        return;
+    }
+
+    // Generate the password using the current phrase and options
+    const newPassword = generatePasswordLogic(phrase, length, excludeNumbers, excludeSymbols, replaceVowels, randomize);
+    generatedPasswordField.value = newPassword;
+
+    // Check password strength after generating it
+    checkPasswordStrength(newPassword);
+};
+
+window.checkPasswordStrength = function (password) {
+    var strength = { status: 'Weak', score: 0, color: 'red' };
+
+    // Check if password is empty
+    if (!password) {
+        updateStrengthIndicator(strength);
+        return;
+    }
+
+    // Length check: more points for longer passwords
+    if (password.length >= 16) {
+        strength.score += 2;
+    } else if (password.length >= 12) {
+        strength.score += 1.5;
+    } else if (password.length >= 8) {
+        strength.score += 1;
+    } else {
+        strength.score += 0.5;
+    }
+
+    // Check for digits
+    if (/\d/.test(password)) {
+        strength.score += 1;
+    }
+
+    // Check for uppercase and lowercase combination
+    if (/[A-Z]/.test(password) && /[a-z]/.test(password)) {
+        strength.score += 1;
+    }
+
+    // Check for symbols
+    if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+        strength.score += 1;
+    }
+
+    // Check for letters mixed with numbers or symbols
+    if (/[a-zA-Z]/.test(password) && (/\d/.test(password) || /[!@#$%^&*(),.?":{}|<>]/.test(password))) {
+        strength.score += 1;
+    }
+
+    // Penalty for common patterns (e.g., "123", "password", "abc", "qwerty")
+    var commonPatterns = ['123', 'password', 'abc', 'qwerty'];
+    commonPatterns.forEach(function (pattern) {
+        if (password.toLowerCase().includes(pattern)) {
+            strength.score -= 1;
+        }
+    });
+
+    // Penalty for consecutive identical characters
+    if (/(\w)\1{2,}/.test(password)) { // e.g., "aaa" or "111"
+        strength.score -= 1;
+    }
+
+    // Penalty for too many repeated characters
+    var charCount = {};
+    for (var i = 0; i < password.length; i++) {
+        var char = password[i];
+        charCount[char] = charCount[char] ? charCount[char] + 1 : 1;
+    }
+    var maxRepetition = Math.max(...Object.values(charCount));
+    if (maxRepetition > password.length / 2) {
+        strength.score -= 1;
+    }
+
+    // Ensure score does not fall below zero
+    strength.score = Math.max(0, strength.score);
+
+    // Update the status and color based on score
+    if (strength.score >= 5) {
+        strength.status = 'Very Strong';
+        strength.color = 'green';
+    } else if (strength.score >= 4) {
+        strength.status = 'Strong';
+        strength.color = 'lightgreen';
+    } else if (strength.score >= 3) {
+        strength.status = 'Moderate';
+        strength.color = 'orange';
+    } else {
+        strength.status = 'Weak';
+        strength.color = 'red';
+    }
+
+    // Update the UI (assuming you have elements to show strength status and color)
+    updateStrengthIndicator(strength);
+
+    return strength;
+};
+
 function updateStrengthIndicator(strength) {
-    // Implement the logic to update the strength indicator UI
     const strengthBarInner = document.getElementById('strength-bar-inner');
+    const strengthText = document.getElementById('strength-text');
+
     if (strengthBarInner) {
         strengthBarInner.style.width = (strength.score / 5) * 100 + '%';
         strengthBarInner.style.backgroundColor = strength.color;
     }
 
-    const strengthText = document.getElementById('strength-text');
     if (strengthText) {
         strengthText.textContent = strength.status;
     }
 }
 
-    // ----------------------------
-    // Clipboard Functions
-    // ----------------------------
+
+
+// ----------------------------
+// Clipboard Functions
+// ----------------------------
+
+    // Function to copy the generated password to clipboard
+    window.copyToClipboard = function () {
+    const passwordField = document.getElementById('generated-password');
+    const clipboardButton = document.getElementById('clipboard-button');
+    const clipboardIcon = document.getElementById('clipboard-icon');
+
+    // Ensure there's a password to copy
+    if (passwordField && passwordField.value) {
+        // Select the text in the password field
+        passwordField.select();
+        passwordField.setSelectionRange(0, 99999);
+
+        // Copy the text inside the password field to clipboard
+        try {
+            document.execCommand('copy');
+            clipboardIcon.classList.remove('bi-clipboard'); // Remove the default icon
+            clipboardIcon.classList.add('bi-clipboard-check'); // Add the "check" icon to indicate success
+
+            // Reset the icon and button text after 2 seconds
+            setTimeout(function () {
+                clipboardIcon.classList.remove('bi-clipboard-check');
+                clipboardIcon.classList.add('bi-clipboard');
+            }, 2000);
+        } catch (err) {
+            clipboardButton.textContent = "Failed to copy"; // Indicate if copying failed
+        }
+    } else {
+        clipboardButton.textContent = "No password to copy"; // Indicate no password available to copy
+    }
+};
 
     window.copyWebsite = function () {
         var field = document.getElementById('website-input');
