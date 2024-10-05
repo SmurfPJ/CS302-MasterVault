@@ -271,7 +271,7 @@
             return;
         }
 
-        fetch('/verify_2fa', {
+        fetch('/verify_2fa_enable', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: userEmail, pin: pin })
@@ -303,8 +303,24 @@
     };
 
     // ----------------------------
-    // Password Management
+    // Password Management / Toggle Visibilities
     // ----------------------------
+
+window.togglePinVisibility = function () {
+    const pinInputs = document.querySelectorAll('.pin-input');
+    const togglePinIcon = document.getElementById('togglePinIcon');
+
+    // Check the type of the first input to decide whether to show or hide the pins
+    if (pinInputs[0].type === 'password') {
+        // Change all inputs to type "text" to show the PIN
+        pinInputs.forEach(input => input.type = 'text');
+        togglePinIcon.className = 'bi bi-eye-slash';  // Change the icon to 'eye-slash' when showing
+    } else {
+        // Change all inputs to type "password" to hide the PIN
+        pinInputs.forEach(input => input.type = 'password');
+        togglePinIcon.className = 'bi bi-eye';  // Change the icon back to 'eye' when hiding
+    }
+};
 
     window.togglePasswordVisibility = function () {
         const passwordInput = document.getElementById('password');
@@ -1097,6 +1113,56 @@ function updateStrengthIndicator(strength) {
             });
         }
     });
+
+    // ----------------------------
+    // 2FA Login (If 2FA Enabled)
+    // ----------------------------
+
+   document.querySelectorAll('.pin-input').forEach((input, index, arr) => {
+    input.addEventListener('input', () => {
+        if (input.value.length === 1 && index < arr.length - 1) {
+            arr[index + 1].focus();
+        }
+    });
+});
+
+document.getElementById('verify-2fa-form').addEventListener('submit', function (e) {
+    e.preventDefault();  // Prevent default form submission
+
+    const email = document.querySelector('input[name="email"]').value;
+    const pin = [
+        document.getElementById('pin1').value,
+        document.getElementById('pin2').value,
+        document.getElementById('pin3').value,
+        document.getElementById('pin4').value
+    ].join('');
+
+    const feedbackElement = document.getElementById('feedback');
+
+    if (pin.length !== 4) {
+        feedbackElement.innerText = 'Please enter the complete 4-digit PIN.';
+        return;
+    }
+
+    // Send a POST request for 2FA login verification
+    fetch('/verify_2fa_login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, pin: pin })
+    })
+    .then(response => response.json())
+    .then(data => {
+        feedbackElement.innerText = data.message;
+        if (data.message === '2FA login verification successful!') {
+            window.location.href = '/animalID_verification';  // Redirect after successful 2FA login
+        }
+    })
+    .catch(error => {
+        feedbackElement.innerText = 'Error: ' + error.message;
+    });
+});
+
+
 
     // ----------------------------
     // Additional Event Listeners

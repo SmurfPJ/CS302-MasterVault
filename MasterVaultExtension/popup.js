@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', function() {
             body: JSON.stringify({ email: email, password: password })
         })
         .then(response => response.json())
-        .then(data => {
+        .then(data => {console.log(email)
             if (data.status === 'success') {
                 chrome.storage.local.set({ 'userSession': data });
             } else {

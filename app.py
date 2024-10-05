@@ -266,48 +266,45 @@ def handle_create_password():
 def landing_page():
     return render_template("landingPage.html")
 
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     cform = LoginForm()
     if request.method == 'POST':
         email = cform.email.data
 
-        # Ensure that email and password are not None
         if email is not None:
-
-            # print(encrypt(email))
-
             findPost = userData.find_one({"email": email})
 
-            # print("Decrypt Username: ", decrypt(findPost['username']))
-            # print("Decrypt Password: ", decrypt(findPost['loginPassword']))
-
-            # print(findPost)
-
             if findPost:
-                
                 postEmail = findPost["email"]
 
-                # print("Email: ", email)
-                # print("Decrypted Email: ", postEmail)
-
                 if email == postEmail:
-
-                    # setSessionID(findPost["_id"])
-                    setSessionID(findPost['_id']) 
-                    # print(session['id'])
-                                    
+                    setSessionID(findPost['_id'])
                     session['username'] = decrypt(findPost["username"])
-                    # print("Decrypted session username: ", session.get('username'))
                     session['email'] = email
-                    # session['_id'] = findPost['_id']
+
+                    # Check if 2FA is enabled in the user's settings
+                    if findPost.get("2FA", False):
+                        # Generate a 4-digit PIN
+                        pin = random.randint(1000, 9999)
+
+                        # Send 2FA PIN for login
+                        send_2fa_verification_email(email, pin, purpose='login')
+
+                        # Store the PIN temporarily for verification
+                        store_pin(email, pin)
+
+                        # Redirect to the 2FA login verification page
+                        return redirect(url_for('two_fa_verify'))
+
+                    # If 2FA is not enabled, proceed to normal flow
                     return redirect(url_for('animalIDVerification'))
 
             flash("Invalid email")
             return render_template("login.html", form=cform)
 
     return render_template("login.html", form=LoginForm())
-
 
 
 @app.route('/logout')
@@ -373,11 +370,18 @@ def animal_id():
 
 
 
-def send_2fa_verification_email(email, pin):
-    msg = Message("Your MasterVault 2FA PIN",
+def send_2fa_verification_email(email, pin, purpose='login'):
+    if purpose == 'login':
+        subject = "Your MasterVault 2FA Login PIN"
+        body = f'Your 2FA verification PIN for login is: {pin}. Use this PIN to complete your login.'
+    elif purpose == 'enable_2fa':
+        subject = "Enable 2FA on Your MasterVault Account"
+        body = f'You have requested to enable 2FA on your account. Your 2FA PIN is: {pin}. Use this PIN to confirm enabling 2FA.'
+
+    msg = Message(subject,
                   sender='nickidummyacc@gmail.com',
                   recipients=[email])
-    msg.body = f'Your 2FA verification PIN is: {pin}'
+    msg.body = body
     mail.send(msg)
 
 
@@ -851,6 +855,13 @@ def add_family_account():
 
 
 
+@app.route('/twoFA_verifylogin', methods=['GET'])
+def two_fa_verify():
+    if not session.get('email'):
+        return redirect(url_for('login'))
+
+    return render_template('2faVerifyLogin.html')
+
 @app.route('/enable_2fa', methods=['POST'])
 def enable_2fa():
     # if not sessionID:
@@ -903,13 +914,13 @@ def setup_2fa():
 
     user_email = request.json.get('email')
     pin = random.randint(1000, 9999)
-    send_2fa_verification_email(user_email, pin)
+    send_2fa_verification_email(user_email, pin, purpose='enable_2fa')
     store_pin(user_email, pin)
     return jsonify({'message': 'A 2FA PIN has been sent to your email'}), 200
 
 
 
-@app.route('/verify_2fa', methods=['POST'])
+@app.route('/verify_2fa_enable', methods=['POST'])
 def verify_2fa():
     if not sessionID:
         return jsonify({'message': 'User not logged in'}), 401
@@ -926,6 +937,27 @@ def verify_2fa():
 
     if is_valid_pin(user_email, entered_pin):
         return jsonify({'message': '2FA verification successful!'}), 200
+    else:
+        return jsonify({'message': 'Invalid or expired PIN'}), 400
+
+@app.route('/verify_2fa_login', methods=['POST'])
+def verify_2fa_login():
+    if not session.get('email'):
+        return jsonify({'message': 'User not logged in'}), 401
+
+    data = request.get_json()
+    print("Received data for login:", data)  # Log received data
+
+    if not data or 'email' not in data or 'pin' not in data:
+        return jsonify({'message': 'Email and PIN are required'}), 400
+
+    user_email = data['email']
+    entered_pin = data['pin']
+    print("Email:", user_email, "Entered PIN for login:", entered_pin)  # Log specifics
+
+    if is_valid_pin(user_email, entered_pin):
+        session['2fa_verified'] = True
+        return jsonify({'message': '2FA login verification successful!'}), 200
     else:
         return jsonify({'message': 'Invalid or expired PIN'}), 400
 
