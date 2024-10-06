@@ -280,31 +280,33 @@ def login():
                 postEmail = findPost["email"]
 
                 if email == postEmail:
+                    # Set session ID and user details
                     setSessionID(findPost['_id'])
                     session['username'] = decrypt(findPost["username"])
                     session['email'] = email
 
                     # Check if 2FA is enabled in the user's settings
                     if findPost.get("2FA", False):
-                        # Generate a 4-digit PIN
+                        # Generate a 4-digit PIN for 2FA
                         pin = random.randint(1000, 9999)
 
-                        # Send 2FA PIN for login
+                        # Send the 2FA PIN for login
                         send_2fa_verification_email(email, pin, purpose='login')
 
-                        # Store the PIN temporarily for verification
+                        # Store the 2FA PIN temporarily for verification
                         store_pin(email, pin)
 
                         # Redirect to the 2FA login verification page
                         return redirect(url_for('two_fa_verify'))
 
-                    # If 2FA is not enabled, proceed to normal flow
+                    # If 2FA is not enabled, proceed to normal flow (animal verification)
                     return redirect(url_for('animalIDVerification'))
 
             flash("Invalid email")
             return render_template("login.html", form=cform)
 
     return render_template("login.html", form=LoginForm())
+
 
 
 @app.route('/logout')
