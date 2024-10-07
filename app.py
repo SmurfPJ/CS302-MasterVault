@@ -307,6 +307,47 @@ def login():
 
     return render_template("login.html", form=LoginForm())
 
+@app.route('/extension_login', methods=['POST'])
+def login_extension():
+    # Check if the request contains JSON data (API or extension login)
+    if request.is_json:
+        data = request.get_json()
+
+        # Ensure that email and password are provided in the JSON request
+        if not data or 'email' not in data or 'password' not in data:
+            return jsonify({"status": "error", "message": "Email and password are required"}), 400
+
+        email = data.get('email')
+        password = data.get('password')
+
+        # Find the user in the database
+        findPost = userData.find_one({"email": email})
+
+        if findPost and findPost["email"] == email:
+            stored_password = decrypt(findPost["loginPassword"])
+
+            # Verify the provided password against the stored plain text password
+            if password == stored_password:
+                # If the password matches, set session or return a successful login response
+                username = decrypt(findPost["username"])
+                setSessionID(findPost['_id'])
+                session['username'] = username
+                session['email'] = email
+                session['password'] = password
+
+                # Return a success message and include the username
+                return jsonify({"status": "success", "message": "Login successful", "username": username}), 200
+            else:
+                # If the password does not match
+                return jsonify({"status": "error", "message": "Invalid email or password"}), 403
+        else:
+            return jsonify({"status": "error", "message": "Invalid email or password"}), 403
+
+    return jsonify({"status": "error", "message": "Invalid request format. JSON expected."}), 400
+
+
+
+
 
 
 @app.route('/logout')

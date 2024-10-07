@@ -27,36 +27,57 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Handle login
-    document.getElementById('loginBtn').addEventListener('click', function() {
-        const email = document.getElementById('email').value;
-        const password = document.getElementById('password').value;
+   // Handle login
+document.getElementById('loginBtn').addEventListener('click', function(event) {
+    event.preventDefault(); // Prevent form from submitting
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
 
-        fetch('http://127.0.0.1:5000/login', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ email: email, password: password })
-        })
-        .then(response => response.json())
-        .then(data => {console.log(email)
-            if (data.status === 'success') {
-                chrome.storage.local.set({ 'userSession': data });
-            } else {
-                document.getElementById('loginError').innerText = data.message;
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-        });
-    });
+    fetch('http://127.0.0.1:5000/extension_login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ email: email, password: password })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json(); // Parse the response as JSON
+    })
+    .then(data => {
+        console.log(data); // For debugging, check what the server returned
+        if (data.status === 'success') {
+            // Set user session in Chrome storage
+            chrome.storage.local.set({ 'userSession': data });
 
-    // Handle logout
-    document.getElementById('logoutBtn').addEventListener('click', function() {
-        chrome.storage.local.remove('userSession', function() {
-            document.getElementById('passwordGenerator').style.display = 'none';
-            document.getElementById('loginForm').style.display = 'block';
-        });
+            // Hide the login form and show the password generator
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('passwordGenerator').style.display = 'block';
+
+            // Display the logged-in user's username
+            document.getElementById('loggedInAs').innerText = `Logged in as: ${data.username}`;
+        } else {
+            document.getElementById('loginError').innerText = data.message;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('loginError').innerText = 'An error occurred. Please try again later.';
     });
+});
+
+
+// Handle logout
+document.getElementById('logoutBtn').addEventListener('click', function() {
+    // Clear the user session and show the login form again
+    chrome.storage.local.remove('userSession', function() {
+        document.getElementById('passwordGenerator').style.display = 'none';
+        document.getElementById('loginForm').style.display = 'block';
+        document.getElementById('loginError').innerText = ''; // Clear error message
+    });
+});
+
+
 
     // Password generation logic
     document.getElementById('generate-btn').addEventListener('click', function() {
