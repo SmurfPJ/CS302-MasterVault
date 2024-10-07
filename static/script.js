@@ -80,7 +80,7 @@
     };
 
     // ----------------------------
-    // Account Locking Mechanism
+    // Account Locking
     // ----------------------------
 
     // All account locking related functions
@@ -552,7 +552,6 @@ function generatePasswordLogic(phrase, length, excludeNumbers = false, excludeSy
         return phonemeMap[char.toLowerCase()] || char;
     }).join('');
 
-    // Generate the final password by picking characters from the phrasePhoneme
     // Prevent extra characters from being added
     var password = phrasePhoneme.slice(0, length);
 
