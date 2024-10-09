@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from flask_mail import Mail, Message
+from flask_cors import CORS
 from forms import RegistrationForm, LoginForm, AnimalSelectionForm, FamilyRegistrationForm
 from dotenv import load_dotenv
 from encryption import encrypt, decrypt
@@ -24,6 +25,7 @@ temporary_2fa_storage = {} # Temporary storage for 2FA codes
 writeToLogin = open('loginInfo', 'w')
 
 app = Flask(__name__)
+CORS(app)
 mail = Mail(app)
 load_dotenv()
 
@@ -42,49 +44,74 @@ def setSessionID(userID):
     sessionID = userID
 
 
+def generate_password(phrase, length, exclude_numbers=False, exclude_symbols=False, replace_vowels=False,
+                      remove_vowels=False, randomize=False):
+    # Always start with letters as the base characters
+    characters = string.ascii_letters
 
-def generate_password(keyword, length, use_numbers, use_symbols, replace_vowels, replace_most_frequent_vowel, remove_vowels, randomize):
+    # Remove spaces from the phrase
+    phrase = phrase.replace(" ", "")
 
-    characters = string.ascii_letters  # Always use letters
-
-    if use_numbers:
+    # Add numbers and symbols unless excluded
+    if not exclude_numbers:
         characters += string.digits
-
-    if use_symbols:
+    if not exclude_symbols:
         characters += string.punctuation
 
-    # Ensure the password is at least as long as the keyword
-    if length < len(keyword):
-        return ""
+    # Ensure the phrase is shorter or equal to the password length
+    if len(phrase) > length:
+        phrase = phrase[:length]  # Shorten the phrase
 
-    # Apply transformations
+    # Extended vowel map with more phoneme-based replacements
     if replace_vowels:
-        keyword = keyword.replace('a', '@').replace('e', '3').replace('i', '1').replace('o', '0').replace('u', 'u')
+        vowel_map = {
+            'a': ['@', 'A', 'æ', '4', 'â', 'ä'],
+            'e': ['3', 'E', '€', 'ê', 'é', 'ë'],
+            'i': ['1', 'I', '!', 'î', 'ï', 'í'],
+            'o': ['0', 'O', 'ø', 'ô', 'ö', 'ó'],
+            'u': ['U', 'u', 'ù', 'û', 'ü', 'ú']
+        }
+        # Replace vowels in the phrase using the extended vowel map
+        phrase = ''.join([random.choice(vowel_map.get(char.lower(), [char])) for char in phrase])
 
-    if replace_most_frequent_vowel:
-        most_frequent_vowel = max(set(keyword), key=keyword.count)
-        if most_frequent_vowel in 'aeiou':
-            keyword = keyword.replace(most_frequent_vowel, 'x')
+    # Revert numbers and symbols if they are excluded
+    if exclude_numbers:
+        phrase = phrase.replace('1', 'i').replace('3', 'e').replace('0', 'o')
+    if exclude_symbols:
+        phrase = phrase.replace('@', 'a').replace('&', 'a').replace('$', 's').replace('#', 'h')
 
+    # Remove vowels if selected
     if remove_vowels:
-        keyword = ''.join([char for char in keyword if char not in 'aeiou'])
+        phrase = ''.join([char for char in phrase if char.lower() not in 'aeiou'])
 
+    # Randomize the phrase characters if selected
     if randomize:
-        keyword = ''.join(random.sample(keyword, len(keyword)))
+        phrase = ''.join(random.sample(phrase, len(phrase)))
 
-    # Add random characters to the keyword until desired length is reached
-    while len(keyword) < length:
-        keyword += random.choice(characters)
+    # Extended phoneme mapping for letters
+    phoneme_map = {
+        'a': 'A', 'b': 'B', 'c': 'C', 'd': 'D', 'e': 'E', 'f': 'F',
+        'g': 'G', 'h': 'H', 'i': 'I', 'j': 'J', 'k': 'K', 'l': 'L',
+        'm': 'M', 'n': 'N', 'o': 'O', 'p': 'P', 'q': 'Q', 'r': 'R',
+        's': 'S', 't': 'T', 'u': 'U', 'v': 'V', 'w': 'W', 'x': 'X',
+        'y': 'Y', 'z': 'Z',
+        # Phoneme-based alternatives for additional variety
+        'ph': 'F', 'gh': 'G', 'ch': 'C', 'sh': 'S', 'th': 'T'
+    }
 
-    # Pattern is basically every third character from the keyword (subjected to change)
-    password = ""
-    for i in range(length):
-        if i % 3 == 0 and i // 3 < len(keyword):
-            password += keyword[i // 3]
-        else:
-            password += random.choice(characters)
+    # Map the phrase to its phoneme equivalents
+    phrase_phoneme = ''.join([phoneme_map.get(char.lower(), char) for char in phrase])
+
+    # # Extend the phrase if it's too short
+    # while len(phrase_phoneme) < length:
+    #     phrase_phoneme += random.choice(characters)
+
+    # Generate the final password by picking characters from the phrase_phoneme
+    password = ''.join(
+        [phrase_phoneme[i] if i < len(phrase_phoneme) else random.choice(characters) for i in range(length)])
 
     return password
+
 
 
 
@@ -135,29 +162,61 @@ def check_password_strength(password):
     if not password:
         return strength
 
-    if len(password) >= 8:
+    # Length check: reward longer passwords
+    if len(password) >= 15:
+        strength['score'] += 2  # Longer than 15 is considered very strong
+    elif len(password) >= 12:
+        strength['score'] += 1.5
+    elif len(password) >= 8:
         strength['score'] += 1
+    else:
+        strength['score'] += 0.5  # Penalize shorter passwords
 
+    # Check for digits
     if any(char.isdigit() for char in password):
         strength['score'] += 1
 
-    if any(char.isupper() for char in password):
+    # Check for uppercase and lowercase combination
+    if any(char.isupper() for char in password) and any(char.islower() for char in password):
         strength['score'] += 1
 
+    # Check for special characters (symbols)
     if any(char in string.punctuation for char in password):
         strength['score'] += 1
 
+    # Check for a mix of letters, numbers, and symbols
+    if (any(char.isalpha() for char in password) and
+            (any(char.isdigit() for char in password) or any(char in string.punctuation for char in password))):
+        strength['score'] += 1
+
+    # Penalize for common patterns like "123", "abc", or repeating characters
+    common_patterns = ['123', 'password', 'abc', 'qwerty']
+    if any(pattern in password.lower() for pattern in common_patterns):
+        strength['score'] -= 1
+
+    # Penalize for consecutive identical characters
+    if any(password[i] == password[i+1] == password[i+2] for i in range(len(password) - 2)):
+        strength['score'] -= 1
+
+    # Penalize for too many repeated characters
+    char_count = {char: password.count(char) for char in set(password)}
+    if any(count > len(password) // 2 for count in char_count.values()):
+        strength['score'] -= 1
+
+    # Adjust score boundaries
+    strength['score'] = max(0, strength['score'])  # Ensure score doesn't go below 0
+
     # Update status and color based on score
-    if strength['score'] == 4:
+    if strength['score'] >= 5:
         strength['status'] = 'Very Strong'
         strength['color'] = 'green'
-    elif strength['score'] == 3:
+    elif strength['score'] >= 4:
         strength['status'] = 'Strong'
         strength['color'] = 'lightgreen'
-    elif strength['score'] == 2:
+    elif strength['score'] >= 3:
         strength['status'] = 'Moderate'
         strength['color'] = 'orange'
-    elif strength['score'] == 1:
+    else:
         strength['status'] = 'Weak'
         strength['color'] = 'red'
 
@@ -165,10 +224,11 @@ def check_password_strength(password):
 
 
 
+
 @app.route('/create_password', methods=['GET'])
 def create_password():
     # Default values for initial page load
-    return render_template('createPassword.html')  # , password="", keyword="", length=8, use_numbers=False, use_symbols=False
+    return render_template('createPassword.html')
 
 
 
@@ -178,72 +238,115 @@ def handle_create_password():
     password = ""
     strength = None
     error = None
-    keyword = request.form.get('keyword')
+    phrase = request.form.get('phrase')
     length = int(request.form.get('length', 8))  # Provide a default value in case it's not set
-    use_numbers = 'numbers' in request.form
-    use_symbols = 'symbols' in request.form
+    exclude_numbers = 'exclude_numbers' in request.form
+    exclude_symbols = 'exclude_symbols' in request.form
     replace_vowels = 'replace_vowels' in request.form
-    replace_most_frequent_vowel = 'replace_most_frequent_vowel' in request.form
-    remove_vowels = 'remove_vowels' in request.form
     randomize = 'randomize' in request.form
 
     # Validate options and generate password
-    if not use_numbers and not use_symbols:
-        error = "Please select at least one option: Use Numbers or Use Symbols."
+    if not phrase:
+        error = "Please enter a phrase."
     else:
-        password = generate_password(keyword, length, use_numbers, use_symbols, replace_vowels, replace_most_frequent_vowel, remove_vowels, randomize)
+        password = generate_password(phrase, length, exclude_numbers, exclude_symbols, replace_vowels,
+                                    randomize)
         strength = check_password_strength(password)
         if not password:
-            error = "Failed to generate password. Ensure the keyword is shorter than the desired password length."
+            error = "Failed to generate password. Ensure the phrase is shorter than the desired password length."
 
     # Render the same template with new data
-    return render_template('createPassword.html', password=password, strength=strength, error=error, keyword=keyword,
-                           length=length, use_numbers=use_numbers, use_symbols=use_symbols, replace_vowels=replace_vowels,
-                           replace_most_frequent_vowel=replace_most_frequent_vowel, remove_vowels=remove_vowels, randomize=randomize)
+    return render_template('createPassword.html', password=password, strength=strength, error=error, phrase=phrase,
+                           length=length, exclude_numbers=exclude_numbers, exclude_symbols=exclude_symbols,
+                           replace_vowels=replace_vowels, randomize=randomize)
 
 
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/landingPage', methods=['GET'])
+def landing_page():
+    return render_template("landingPage.html")
+
+
+@app.route('/login', methods=['GET', 'POST'])
 def login():
     cform = LoginForm()
     if request.method == 'POST':
         email = cform.email.data
 
-        # Ensure that email and password are not None
         if email is not None:
-
-            # print(encrypt(email))
-
             findPost = userData.find_one({"email": email})
 
-            # print("Decrypt Username: ", decrypt(findPost['username']))
-            # print("Decrypt Password: ", decrypt(findPost['loginPassword']))
-
-            # print(findPost)
-
             if findPost:
-                
                 postEmail = findPost["email"]
 
-                # print("Email: ", email)
-                # print("Decrypted Email: ", postEmail)
-
                 if email == postEmail:
-
-                    # setSessionID(findPost["_id"])
-                    setSessionID(findPost['_id']) 
-                    # print(session['id'])
-                                    
+                    # Set session ID and user details
+                    setSessionID(findPost['_id'])
                     session['username'] = decrypt(findPost["username"])
-                    # print("Decrypted session username: ", session.get('username'))
                     session['email'] = email
-                    # session['_id'] = findPost['_id']
+
+                    # Check if 2FA is enabled in the user's settings
+                    if findPost.get("2FA", False):
+                        # Generate a 4-digit PIN for 2FA
+                        pin = random.randint(1000, 9999)
+
+                        # Send the 2FA PIN for login
+                        send_2fa_verification_email(email, pin, purpose='login')
+
+                        # Store the 2FA PIN temporarily for verification
+                        store_pin(email, pin)
+
+                        # Redirect to the 2FA login verification page
+                        return redirect(url_for('two_fa_verify'))
+
+                    # If 2FA is not enabled, proceed to normal flow (animal verification)
                     return redirect(url_for('animalIDVerification'))
 
             flash("Invalid email")
             return render_template("login.html", form=cform)
 
     return render_template("login.html", form=LoginForm())
+
+@app.route('/extension_login', methods=['POST'])
+def login_extension():
+    # Check if the request contains JSON data (API or extension login)
+    if request.is_json:
+        data = request.get_json()
+
+        # Ensure that email and password are provided in the JSON request
+        if not data or 'email' not in data or 'password' not in data:
+            return jsonify({"status": "error", "message": "Email and password are required"}), 400
+
+        email = data.get('email')
+        password = data.get('password')
+
+        # Find the user in the database
+        findPost = userData.find_one({"email": email})
+
+        if findPost and findPost["email"] == email:
+            stored_password = decrypt(findPost["loginPassword"])
+
+            # Verify the provided password against the stored plain text password
+            if password == stored_password:
+                # If the password matches, set session or return a successful login response
+                username = decrypt(findPost["username"])
+                setSessionID(findPost['_id'])
+                session['username'] = username
+                session['email'] = email
+                session['password'] = password
+
+                # Return a success message and include the username
+                return jsonify({"status": "success", "message": "Login successful", "username": username}), 200
+            else:
+                # If the password does not match
+                return jsonify({"status": "error", "message": "Invalid email or password"}), 403
+        else:
+            return jsonify({"status": "error", "message": "Invalid email or password"}), 403
+
+    return jsonify({"status": "error", "message": "Invalid request format. JSON expected."}), 400
+
+
+
 
 
 
@@ -310,11 +413,18 @@ def animal_id():
 
 
 
-def send_2fa_verification_email(email, pin):
-    msg = Message("Your MasterVault 2FA PIN",
+def send_2fa_verification_email(email, pin, purpose='login'):
+    if purpose == 'login':
+        subject = "Your MasterVault 2FA Login PIN"
+        body = f'Your 2FA verification PIN for login is: {pin}. Use this PIN to complete your login.'
+    elif purpose == 'enable_2fa':
+        subject = "Enable 2FA on Your MasterVault Account"
+        body = f'You have requested to enable 2FA on your account. Your 2FA PIN is: {pin}. Use this PIN to confirm enabling 2FA.'
+
+    msg = Message(subject,
                   sender='nickidummyacc@gmail.com',
                   recipients=[email])
-    msg.body = f'Your 2FA verification PIN is: {pin}'
+    msg.body = body
     mail.send(msg)
 
 
@@ -671,7 +781,7 @@ def resetPassword():
         newPassword = request.form['newPassword']
 
         if newPassword == request.form['confirmNewPassword']:
-            userData.update_one({"_id": sessionID}, {"$set": {"loginPassword": newPassword}})
+            userData.update_one({"_id": sessionID}, {"$set": {"loginPassword": encrypt(newPassword)}})
             return redirect(url_for('passwordList'))
 
     return render_template('resetPassword.html')
@@ -788,6 +898,13 @@ def add_family_account():
 
 
 
+@app.route('/twoFA_verifylogin', methods=['GET'])
+def two_fa_verify():
+    if not session.get('email'):
+        return redirect(url_for('login'))
+
+    return render_template('2faVerifyLogin.html')
+
 @app.route('/enable_2fa', methods=['POST'])
 def enable_2fa():
     # if not sessionID:
@@ -840,13 +957,13 @@ def setup_2fa():
 
     user_email = request.json.get('email')
     pin = random.randint(1000, 9999)
-    send_2fa_verification_email(user_email, pin)
+    send_2fa_verification_email(user_email, pin, purpose='enable_2fa')
     store_pin(user_email, pin)
     return jsonify({'message': 'A 2FA PIN has been sent to your email'}), 200
 
 
 
-@app.route('/verify_2fa', methods=['POST'])
+@app.route('/verify_2fa_enable', methods=['POST'])
 def verify_2fa():
     if not sessionID:
         return jsonify({'message': 'User not logged in'}), 401
@@ -863,6 +980,27 @@ def verify_2fa():
 
     if is_valid_pin(user_email, entered_pin):
         return jsonify({'message': '2FA verification successful!'}), 200
+    else:
+        return jsonify({'message': 'Invalid or expired PIN'}), 400
+
+@app.route('/verify_2fa_login', methods=['POST'])
+def verify_2fa_login():
+    if not session.get('email'):
+        return jsonify({'message': 'User not logged in'}), 401
+
+    data = request.get_json()
+    print("Received data for login:", data)  # Log received data
+
+    if not data or 'email' not in data or 'pin' not in data:
+        return jsonify({'message': 'Email and PIN are required'}), 400
+
+    user_email = data['email']
+    entered_pin = data['pin']
+    print("Email:", user_email, "Entered PIN for login:", entered_pin)  # Log specifics
+
+    if is_valid_pin(user_email, entered_pin):
+        session['2fa_verified'] = True
+        return jsonify({'message': '2FA login verification successful!'}), 200
     else:
         return jsonify({'message': 'Invalid or expired PIN'}), 400
 

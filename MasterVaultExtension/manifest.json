@@ -23,10 +23,11 @@
   ],
  "permissions": [
     "activeTab",
-    "tabs",
     "storage",
-    "notifications"
-],
+    "notifications",
+    "contextMenus",
+    "scripting"
+ ],
 
   "background": {
     "service_worker": "background.js"
