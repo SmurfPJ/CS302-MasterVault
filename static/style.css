@@ -786,3 +786,37 @@ width: 300px;
     color: green;
     margin-top: 20px;
 }
+
+/*Family Account Dropdown Menu*/
+
+.familyAccount-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #173356;
+}
+
+.familyAccount-input-group-text {
+    background-color: #f8f9fa;
+    border-right: 0;
+    color: #495057;
+    font-size: 0.875rem;
+    padding: 0.25rem 0.75rem;
+}
+
+.familyAccount-select {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+    border-radius: 0.3rem;
+}
+
+.familyAccount-input-group {
+    max-width: 300px;
+}
+
+.familyAccount-input-group-text i {
+    font-size: 1rem;
+}
+
+.familyAccount-icon {
+    color: #173356;
+}

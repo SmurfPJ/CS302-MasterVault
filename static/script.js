@@ -1162,6 +1162,15 @@ document.getElementById('verify-2fa-form').addEventListener('submit', function (
 });
 
 
+    // ----------------------------
+    // Family Account Switch Accounts
+    // ----------------------------
+document.getElementById('accountSelect').addEventListener('change', function() {
+    const accountId = this.value;
+    if (accountId) {
+        window.location.href = `/familyPasswordList?account_id=${accountId}`;
+    }
+});
 
     // ----------------------------
     // Additional Event Listeners

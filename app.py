@@ -366,14 +366,13 @@ def aboutUs():
     return render_template('aboutUs.html')
 
 
-
 @app.route('/animalID_verification', methods=['GET', 'POST'])
 def animalIDVerification():
     findPost = userData.find_one({"_id": sessionID})
     available_animals = ['giraffe', 'dog', 'chicken', 'monkey', 'peacock', 'tiger']
     selected_animal = decrypt(findPost['animalID'])
-    # print("Decrypted animal ID: ", selected_animal)
-    
+
+    # Ensure selected_animal is valid, otherwise choose a random one
     if selected_animal not in available_animals:
         selected_animal = random.choice(available_animals)
 
@@ -381,20 +380,23 @@ def animalIDVerification():
         password = request.form.get('password')
         security_check = request.form.get('securityCheck')
 
-        # print("Decrypted password: ", findPost['loginPassword'])
-
+        # Check if the password and security check are correct
         if security_check and password == decrypt(findPost['loginPassword']):
-            if findPost['masterPassword'] == None:
+            # Check if the user has a master password set
+            if findPost['masterPassword'] is None:
                 return redirect(url_for('master_password'))
             else:
-                return redirect(url_for('passwordList'))
+                # Redirect based on account type
+                account_type = findPost.get('accountType', 'personal')
+                if account_type == 'family':
+                    return redirect(url_for('familyPasswordList'))
+                else:
+                    return redirect(url_for('passwordList'))
 
+        # If the credentials are incorrect, show an error message
         flash('Incorrect password or security check not confirmed', 'danger')
 
     return render_template('animal_IDLogin.html', selected_animal=selected_animal)
-
-
-
 
 
 @app.route('/choose_animal', methods=['GET', 'POST'])
@@ -548,11 +550,8 @@ def register_family():
     return render_template('registrationAddFamily.html', form=form)
 
 
-
-
 @app.route('/master_password', methods=['GET', 'POST'])
 def master_password():
-
     findPost = userData.find_one({"_id": sessionID})
     email = findPost['email']
 
@@ -564,24 +563,31 @@ def master_password():
         print(lockedPost)
         if lockedPost == "Locked":
             flash(
-            'Your account is currently locked. You cannot set or reset the master password while the account is locked.',
-            'error')
+                'Your account is currently locked. You cannot set or reset the master password while the account is locked.',
+                'error')
             return redirect(url_for('settings'))
-    
+
     if request.method == 'POST':
         master_password = request.form['master_password']
 
         if master_password == request.form['confirmMaster_password']:
-            userData.update_one({"_id": sessionID}, {"$set": {"masterPassword": encrypt(master_password)}})
+            # Encrypt and update the master password
+            encrypted_password = encrypt(master_password)
+            userData.update_one({"_id": sessionID}, {"$set": {"masterPassword": encrypted_password}})
 
-            userData.update_one({"_id": sessionID}, {"$set": {"masterPassword": encrypt(master_password)}})
+            # Check if the user has a family account
+            account_type = findPost.get('accountType', 'personal')
 
             # Flash a success message
             flash('Master password set up successfully!', 'success')
-            return redirect(url_for('passwordList'))
-    
-    return render_template('masterPassword.html')
 
+            # Redirect based on account type
+            if account_type == 'family':
+                return redirect(url_for('familyPasswordList'))
+            else:
+                return redirect(url_for('passwordList'))
+
+    return render_template('masterPassword.html')
 
 
 @app.route('/addPassword', methods=['GET', 'POST'])
@@ -808,6 +814,11 @@ def passwordList():
     else:
         flash('Please log in to access your passwords.', 'warning')
         return redirect(url_for('login'))
+
+
+@app.route('/familyPasswordList', methods=['GET'])
+def familyPasswordList():
+    return render_template('passwordListFamily.html')
 
 
 @app.route('/lockedPasswordList', methods=['GET'])
