@@ -17,6 +17,7 @@ userPasswords = db["userPasswords"]
 familyData = db["familyData"]
 temporary_2fa_storage = {} # Temporary storage for 2FA codes
 
+
 # Encrypt data
 # def encryptData():
 
@@ -362,8 +363,10 @@ def logout():
 
 @app.route('/about', methods=['GET'])
 def aboutUs():
+    user_data = userData.find_one({"_id": sessionID})
+    account_type = user_data.get('accountType', 'personal')
 
-    return render_template('aboutUs.html')
+    return render_template('aboutUs.html', accountType=account_type)
 
 
 @app.route('/animalID_verification', methods=['GET', 'POST'])
@@ -818,7 +821,10 @@ def passwordList():
 
 @app.route('/familyPasswordList', methods=['GET'])
 def familyPasswordList():
-    return render_template('passwordListFamily.html')
+    user_data = userData.find_one({"_id": sessionID})
+    account_type = user_data.get('accountType', 'personal')
+
+    return render_template('passwordListFamily.html', accountType=account_type)
 
 
 @app.route('/lockedPasswordList', methods=['GET'])
