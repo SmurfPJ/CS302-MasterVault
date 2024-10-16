@@ -14,8 +14,8 @@
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log('Received message:', message);
     if (!message.action || !message.password || !message.tabId) {
-        console.warn('Autofill failed. Invalid request: Missing action, password, or tabId.');
-        sendResponse({ status: 'Autofill failed. Invalid request: Missing action, password, or tabId.' });
+        console.warn('Autofill failed. Invalid request: Missing action, password.');
+        sendResponse({ status: 'Autofill failed. Invalid request: Missing action, password.' });
         return;
     }
 
@@ -93,7 +93,6 @@ function autofillPassword(tabId, password) {
 
             // Try to autofill immediately
             if (!attemptAutofill()) {
-                // Retry after a delay in case the DOM changes or is not fully loaded
                 setTimeout(() => {
                     attemptAutofill();
                 }, 1000); // Retry after 1 second

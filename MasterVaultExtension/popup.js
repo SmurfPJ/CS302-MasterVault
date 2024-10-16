@@ -180,7 +180,7 @@ window.autofillPasswordExtension = function () {
             const tabId = tabs[0].id;
             console.log('Sending autofill message:', { action: 'autofillPassword', password: password, tabId: tabId });
             chrome.runtime.sendMessage({ action: 'autofillPassword', password: password, tabId: tabId }, function(response) {
-                // Check if there was an error sending the message
+                // Check if there's error sending the message
                 if (chrome.runtime.lastError) {
                     console.error('Error sending message:', chrome.runtime.lastError.message);
                     return;
