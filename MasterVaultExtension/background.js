@@ -1,88 +1,104 @@
-// chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-//   if (message.type === "PASSWORD_INPUT_FOCUSED") {
-//     const notificationId = `password-focused-${Date.now()}`;
-//
-//     chrome.notifications.create(notificationId, {
-//       type: 'basic',
-//       iconUrl: 'images/Logo16x16.png',
-//       title: 'MasterVault',
-//       message: 'A reminder to secure your passwords using our password generator!',
-//       priority: 2
+// chrome.runtime.onInstalled.addListener(() => {
+//     // Create the context menu item for autofilling the password
+//     chrome.contextMenus.create({
+//         id: "autofillPassword", // This is the ID for the context menu
+//         title: "MasterVault - Autofill Password", // The label users will see
+//         contexts: ["editable"] // Ensures it only shows on editable fields
 //     });
-//   }
+//
+//     console.log("Autofill context menu created");
 // });
 
-// Create a context menu item for password fields
-// Context Menu Setup
-chrome.runtime.onInstalled.addListener(() => {
-    // Create the context menu item for autofilling the password
-    chrome.contextMenus.create({
-        id: "autofillPassword", // This is the ID for the context menu
-        title: "MasterVault - Autofill Password", // The label users will see
-        contexts: ["editable"] // Ensures it only shows on editable fields
-    });
 
-    console.log("Autofill context menu created");
-});
-
-// Handle context menu click
-chrome.contextMenus.onClicked.addListener((info, tab) => {
-    if (info.menuItemId === "autofillPassword") {
-        // Autofill the password when the user clicks the context menu
-        chrome.storage.local.get('userSession', function(result) {
-            if (result.userSession && result.userSession.status === 'success') {
-                // If logged in, autofill the password
-                autofillPassword(tab.id);
-            } else {
-                // If not logged in, open the extension login page in a popup
-                chrome.windows.create({
-                    url: "popup.html",
-                    type: "popup",
-                    width: 400,
-                    height: 600
-                });
-            }
-        });
+// Listen for messages from the popup or other scripts
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    console.log('Received message:', message);
+    if (!message.action || !message.password || !message.tabId) {
+        console.warn('Autofill failed. Invalid request: Missing action, password, or tabId.');
+        sendResponse({ status: 'Autofill failed. Invalid request: Missing action, password, or tabId.' });
+        return;
     }
+
+    if (message.action === 'autofillPassword') {
+        // Perform autofill on the specified tab
+        autofillPassword(message.tabId, message.password);
+        sendResponse({ status: 'Autofill attempted' });
+    } else {
+        console.warn('Autofill failed. Invalid request: Unknown action:', message.action);
+        sendResponse({ status: 'Autofill failed. Invalid request: Unknown action.' });
+    }
+    return true;
 });
 
-// Autofill function to be injected into the page
-function autofillPassword(tabId) {
-    chrome.storage.local.get('generatedPassword', function(result) {
-        if (result.generatedPassword) {
-            const password = result.generatedPassword;
 
-            // Inject the password into the active password field
-            chrome.scripting.executeScript({
-                target: { tabId: tabId },
-                function: (password) => {
-                    const passwordField = document.querySelector('input[type="password"]');
-                    if (passwordField) {
-                        passwordField.value = password;
-                        // Trigger the change event to simulate user input
-                        const event = new Event('change', { bubbles: true });
-                        passwordField.dispatchEvent(event);
-                    } else {
-                        alert('No password field found!');
+// Autofill function to inject the password into the page
+function autofillPassword(tabId, password) {
+    chrome.scripting.executeScript({
+        target: { tabId: tabId },
+        function: (password) => {
+            // Function to find the password field on the page
+            function findPasswordField() {
+                // Try common password field selectors
+                let passwordField = document.querySelector('input[type="password"]')
+                    || document.querySelector('input[name="pass"]')
+                    || document.querySelector('input[autocomplete="current-password"]');
+
+                // If still not found, check for other potential password fields
+                if (!passwordField) {
+                    passwordField = document.querySelector('input[type="password"][data-testid="royal_pass"]')
+                        || document.querySelector('input[type="password"][id="pass"]');
+                }
+
+                // Fallback to text input fields, filtering out username/email fields
+                if (!passwordField) {
+                    let textFields = document.querySelectorAll('input[type="text"]');
+                    for (let field of textFields) {
+                        let fieldName = field.getAttribute('name') || '';
+                        let fieldAutocomplete = field.getAttribute('autocomplete') || '';
+
+                        // Avoid fields likely used for email or username
+                        if (!fieldName.toLowerCase().includes('email') && !fieldAutocomplete.toLowerCase().includes('email')
+                            && !fieldName.toLowerCase().includes('user') && !fieldAutocomplete.toLowerCase().includes('user')) {
+                            passwordField = field;
+                            break;
+                        }
                     }
-                },
-                args: [password]
-            });
-        } else {
-            alert('No generated password found in storage.');
-        }
+                }
+
+                return passwordField;
+            }
+
+            // Function to attempt autofilling the password
+            function attemptAutofill() {
+                const passwordField = findPasswordField();
+
+                if (passwordField) {
+                    // Set the value to the generated password
+                    passwordField.value = password;
+
+                    // If the field is currently a "text" input, change it back to "password" for security
+                    if (passwordField.type === "text") {
+                        passwordField.type = "password";
+                    }
+
+                    // Trigger input and change events to simulate user typing
+                    passwordField.dispatchEvent(new Event('input', { bubbles: true }));
+                    passwordField.dispatchEvent(new Event('change', { bubbles: true }));
+
+                    console.log("Password autofilled successfully.");
+                    return true; // Indicate autofill success
+                }
+                return false; // Indicate autofill failure
+            }
+
+            // Try to autofill immediately
+            if (!attemptAutofill()) {
+                // Retry after a delay in case the DOM changes or is not fully loaded
+                setTimeout(() => {
+                    attemptAutofill();
+                }, 1000); // Retry after 1 second
+            }
+        },
+        args: [password]
     });
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

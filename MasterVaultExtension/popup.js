@@ -1,4 +1,7 @@
 document.addEventListener('DOMContentLoaded', function() {
+    // Load saved settings (phrase and checkbox states) on extension load
+    loadSavedSettings();
+
     // Check for existing user session
     checkActiveSession();
 
@@ -60,6 +63,26 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // Save phrase input when it changes
+    document.getElementById('phrase-input').addEventListener('input', function() {
+        const phrase = this.value;
+        chrome.storage.local.set({ 'savedPhrase': phrase });
+    });
+
+    // Save length input when it changes
+    document.getElementById('length-input').addEventListener('input', function() {
+        const length = this.value;
+        chrome.storage.local.set({ 'savedLength': length });
+    });
+
+    // Save checkbox states when they change
+    const checkboxes = ['replace_vowels', 'exclude_numbers', 'exclude_symbols', 'randomize'];
+    checkboxes.forEach(function(id) {
+        document.getElementById(id).addEventListener('change', function() {
+            chrome.storage.local.set({ [id]: this.checked });
+        });
+    });
+
     // Handle password generation
     document.getElementById('generate-btn').addEventListener('click', function() {
         const phrase = document.getElementById('phrase-input').value;
@@ -92,12 +115,40 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('refreshButton')?.addEventListener('click', refreshPasswordExtension);
     document.getElementById('clipboard-button')?.addEventListener('click', copyToClipboardExtension);
 
-    // New snippet added to attach refresh event listener
+
     const refreshButton = document.querySelector('.refreshButton');
     if (refreshButton) {
         refreshButton.addEventListener('click', refreshPasswordExtension);
     }
 });
+
+// load saved settings from chrome storage
+function loadSavedSettings() {
+    // Load the saved phrase and checkbox states
+    chrome.storage.local.get(['savedPhrase', 'savedLength', 'replace_vowels', 'exclude_numbers', 'exclude_symbols', 'randomize'], function(result) {
+        if (result.savedPhrase) {
+            document.getElementById('phrase-input').value = result.savedPhrase;
+        }
+
+        if (result.savedLength) {
+            document.getElementById('length-input').value = result.savedLength;
+        }
+
+        // Restore checkbox states
+        if (result.replace_vowels !== undefined) {
+            document.getElementById('replace_vowels').checked = result.replace_vowels;
+        }
+        if (result.exclude_numbers !== undefined) {
+            document.getElementById('exclude_numbers').checked = result.exclude_numbers;
+        }
+        if (result.exclude_symbols !== undefined) {
+            document.getElementById('exclude_symbols').checked = result.exclude_symbols;
+        }
+        if (result.randomize !== undefined) {
+            document.getElementById('randomize').checked = result.randomize;
+        }
+    });
+}
 
 // Function to dynamically update the length input based on the phrase input
 window.updateLengthInput = function () {
@@ -105,28 +156,56 @@ window.updateLengthInput = function () {
     const lengthInput = document.getElementById('length-input');
 
     const phrase = phraseInput.value;
-    const minLength = phrase.replace(/\s+/g, '').length; // Remove spaces and calculate the length of the phrase
-    lengthInput.value = minLength; // Automatically set the length input value based on the phrase length
+    const minLength = phrase.replace(/\s+/g, '').length;
+    lengthInput.value = minLength;
+
+    chrome.storage.local.set({ 'savedLength': minLength });
 };
 
-// Copy the generated password to clipboard
-window.copyToClipboardExtension = function () {
+// Autofill the generated password into the password field on the active tab
+window.autofillPasswordExtension = function () {
     const generatedPasswordField = document.getElementById('generated-password');
-    const clipboardIcon = document.getElementById('clipboard-icon');
 
-    // Copy the password to the clipboard
-    navigator.clipboard.writeText(generatedPasswordField.value).then(() => {
-        // Change the icon to provide feedback that the password was copied
-        clipboardIcon.className = "bi bi-check";
+    // Get the generated password value
+    const password = generatedPasswordField.value;
 
-        // Reset the icon back to clipboard after a short delay
-        setTimeout(() => {
-            clipboardIcon.className = "bi bi-clipboard";
-        }, 2000); // Reset after 2 seconds
-    }).catch(err => {
-        console.error('Failed to copy password: ', err);
+    if (!password) {
+        alert('No generated password to autofill.');
+        return;
+    }
+
+    // Get the active tab and send a message to the background script to autofill the password
+    chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+        if (tabs[0] && tabs[0].id) {
+            const tabId = tabs[0].id;
+            console.log('Sending autofill message:', { action: 'autofillPassword', password: password, tabId: tabId });
+            chrome.runtime.sendMessage({ action: 'autofillPassword', password: password, tabId: tabId }, function(response) {
+                // Check if there was an error sending the message
+                if (chrome.runtime.lastError) {
+                    console.error('Error sending message:', chrome.runtime.lastError.message);
+                    return;
+                }
+
+                // Ensure the response is defined before accessing its properties
+                if (response && response.status) {
+                    console.log('Response from background script:', response.status);
+                } else {
+                    console.error('No response received or response is undefined.');
+                }
+            });
+        } else {
+            console.error('No active tab found.');
+        }
     });
 };
+
+// Add event listener for the autofill icon
+document.getElementById('autofill-icon').addEventListener('click', function() {
+    autofillPasswordExtension();
+});
+
+
+
 
 // Handle the refresh button (refreshes the generated password)
 window.refreshPasswordExtension = function () {
@@ -151,11 +230,11 @@ window.refreshPasswordExtension = function () {
         return;
     }
 
-    // Generate the password using the logic that accounts for exclusion flags
-    const newPassword = generatePassword(phrase, length, excludeNumbers, excludeSymbols, replaceVowels, randomize);
+    // Generate the password with exclusions set by users
+    const newPassword = generatePassword(phrase, length, replaceVowels, excludeNumbers, excludeSymbols, randomize);
     generatedPasswordField.value = newPassword;
 
-    // Store the generated password in chrome local storage
+    // Store the generated password in storage
     chrome.storage.local.set({ 'generatedPassword': newPassword });
 
     // Update password strength after refreshing
@@ -163,28 +242,11 @@ window.refreshPasswordExtension = function () {
     updateStrengthIndicator(strength);
 };
 
-
-
-document.addEventListener('DOMContentLoaded', function () {
-    const refreshButton = document.querySelector('.refreshButton');
-    if (refreshButton) {
-        refreshButton.addEventListener('click', refreshPassword);
-    }
-});
-
-// Function to generate the password based on the user's inputs with phoneme-based replacements
+// generate the password based on the user's inputs with phoneme replacements
 function generatePassword(phrase, length, replaceVowels, excludeNumbers, excludeSymbols, randomize) {
-    // Always start with letters as the base characters
-    var characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
     // Remove spaces from the phrase
     phrase = phrase.replace(/\s+/g, '');
 
-    // Add numbers and symbols unless excluded
-    if (!excludeNumbers) characters += "0123456789";
-    if (!excludeSymbols) characters += "!@#$%^&*()_-+=<>?/[]{}|";
-
-    // If the phrase is longer than the desired length, truncate it
     if (!phrase || length < phrase.length) return "";
 
     // Extended vowel map with phoneme-based replacements
@@ -205,12 +267,12 @@ function generatePassword(phrase, length, replaceVowels, excludeNumbers, exclude
         }).join('');
     }
 
-    // Revert numbers and symbols if they are excluded
+    // Remove numbers and symbols from the phrase if they are excluded
     if (excludeNumbers) {
-        phrase = phrase.replace(/1/g, 'i').replace(/3/g, 'e').replace(/0/g, 'o');
+        phrase = phrase.replace(/[0-9]/g, ''); // Remove all digits
     }
     if (excludeSymbols) {
-        phrase = phrase.replace(/@/g, 'a').replace(/\$/g, 's').replace(/#/g, 'h');
+        phrase = phrase.replace(/[!@#$%^&*()_\-+=<>?/[\]{}|]/g, ''); // Remove symbols
     }
 
     // Randomize the phrase characters if the option is selected
@@ -218,24 +280,8 @@ function generatePassword(phrase, length, replaceVowels, excludeNumbers, exclude
         phrase = phrase.split('').sort(() => 0.5 - Math.random()).join('');
     }
 
-    // Map the phrase to its phoneme equivalents
-    var phonemeMap = {
-        'a': 'A', 'b': 'B', 'c': 'C', 'd': 'D', 'e': 'E', 'f': 'F',
-        'g': 'G', 'h': 'H', 'i': 'I', 'j': 'J', 'k': 'K', 'l': 'L',
-        'm': 'M', 'n': 'N', 'o': 'O', 'p': 'P', 'q': 'Q', 'r': 'R',
-        's': 'S', 't': 'T', 'u': 'U', 'v': 'V', 'w': 'W', 'x': 'X',
-        'y': 'Y', 'z': 'Z',
-        // Phoneme-based replacements
-        'ph': 'F', 'gh': 'G', 'ch': 'C', 'sh': 'S', 'th': 'T'
-    };
-
-    // Map the phrase to its phoneme equivalents
-    var phrasePhoneme = phrase.split('').map(function (char) {
-        return phonemeMap[char.toLowerCase()] || char;
-    }).join('');
-
-    // Prevent extra characters from being added
-    var password = phrasePhoneme.slice(0, length);
+    // Prevent extra characters from being added by trimming the phrase to the desired length
+    let password = phrase.slice(0, length);
 
     return password;
 }
@@ -301,7 +347,7 @@ function checkPasswordStrength(password) {
         strength.score -= 1;
     }
 
-    // Ensure the score is not negative
+    // make sure score is not negative
     strength.score = Math.max(0, strength.score);
 
     // Determine the status and color based on the score
@@ -322,7 +368,7 @@ function checkPasswordStrength(password) {
     return strength;
 }
 
-// Function to update the password strength indicator on the UI
+// update the password strength indicator on the UI
 function updateStrengthIndicator(strength) {
     const indicator = document.getElementById('strength-indicator');
     indicator.innerHTML = `
@@ -357,11 +403,4 @@ function checkActiveSession() {
         }
     });
 }
-
-
-
-
-
-
-
 
