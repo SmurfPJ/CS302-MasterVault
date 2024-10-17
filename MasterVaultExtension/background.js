@@ -49,7 +49,6 @@ function autofillPassword(tabId, password) {
                         || document.querySelector('input[type="password"][id="pass"]');
                 }
 
-                // Fallback to text input fields, filtering out username/email fields
                 if (!passwordField) {
                     let textFields = document.querySelectorAll('input[type="text"]');
                     for (let field of textFields) {
@@ -68,7 +67,7 @@ function autofillPassword(tabId, password) {
                 return passwordField;
             }
 
-            // Function to attempt autofilling the password
+            // attempt autofilling the password
             function attemptAutofill() {
                 const passwordField = findPasswordField();
 
@@ -91,13 +90,23 @@ function autofillPassword(tabId, password) {
                 return false; // Indicate autofill failure
             }
 
+            const observer = new MutationObserver(() => {
+                if (attemptAutofill()) {
+                    // Stop observing once autofill succeeds
+                    observer.disconnect();
+                }
+            });
+
+            observer.observe(document.body, { childList: true, subtree: true });
+
             // Try to autofill immediately
             if (!attemptAutofill()) {
-                setTimeout(() => {
-                    attemptAutofill();
-                }, 1000); // Retry after 1 second
+                console.log("Password field not found yet, waiting for changes...");
+            } else {
+                observer.disconnect();
             }
         },
         args: [password]
     });
 }
+
