@@ -174,7 +174,7 @@ window.autofillPasswordExtension = function () {
         return;
     }
 
-    // Get the active tab and send a message to the background script to autofill the password
+    // Get active tab and send a message to the background script to autofill password
     chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
         if (tabs[0] && tabs[0].id) {
             const tabId = tabs[0].id;
@@ -186,7 +186,6 @@ window.autofillPasswordExtension = function () {
                     return;
                 }
 
-                // Ensure the response is defined before accessing its properties
                 if (response && response.status) {
                     console.log('Response from background script:', response.status);
                 } else {
@@ -199,7 +198,7 @@ window.autofillPasswordExtension = function () {
     });
 };
 
-// Add event listener for the autofill icon
+//event listener for the autofill icon
 document.getElementById('autofill-icon').addEventListener('click', function() {
     autofillPasswordExtension();
 });
@@ -207,7 +206,7 @@ document.getElementById('autofill-icon').addEventListener('click', function() {
 
 
 
-// Handle the refresh button (refreshes the generated password)
+// Refreshes the generated password)
 window.refreshPasswordExtension = function () {
     const phraseInput = document.getElementById('phrase-input');
     const lengthInput = document.getElementById('length-input');

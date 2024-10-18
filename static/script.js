@@ -209,98 +209,135 @@
             .catch(error => console.error('Error:', error));
     }
 
-    // ----------------------------
-    // 2FA Authentication
-    // ----------------------------
+// ----------------------------
+// 2FA Authentication
+// ----------------------------
 
-    // All 2FA related functions
-    window.enable2FAandRequestPIN = function (userEmail, feedbackElement, twoStepVerificationInput) {
-        fetch('/enable_2fa', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: userEmail })
-        })
-            .then(response => response.json())
-            .then(data => {
-                feedbackElement.innerText = data.message;
+// Function to enable 2FA and request a PIN from the user
+window.enable2FAandRequestPIN = function (userEmail, feedbackElement, twoStepVerificationInput) {
+    fetch('/enable_2fa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: userEmail })
+    })
+        .then(response => response.json())
+        .then(data => {
+            feedbackElement.innerText = data.message;
+
+            // Reset and show the PIN input if 2FA was enabled successfully
+            if (data.message === '2FA has been enabled') {
+                resetPINInput(twoStepVerificationInput);  // Reset the input field
                 requestPIN(userEmail, feedbackElement, twoStepVerificationInput);
-            })
-            .catch(error => {
-                feedbackElement.innerText = 'Error: ' + error.message;
-            });
-    };
-
-    window.disable2FA = function (userEmail, feedbackElement, twoStepVerificationInput) {
-        fetch('/disable_2fa', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: userEmail })
+            }
         })
-            .then(response => response.json())
-            .then(data => {
-                displayMessageAndHide(feedbackElement, data.message);
+        .catch(error => {
+            feedbackElement.innerText = 'Error: ' + error.message;
+        });
+};
+
+// Function to disable 2FA and hide the PIN input
+window.disable2FA = function (userEmail, feedbackElement, twoStepVerificationInput) {
+    fetch('/disable_2fa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: userEmail })
+    })
+        .then(response => response.json())
+        .then(data => {
+            displayMessageAndHide(feedbackElement, data.message);
+            // Hide the PIN input field when 2FA is disabled
+            twoStepVerificationInput.style.display = 'none';
+        })
+        .catch(error => {
+            displayMessageAndHide(feedbackElement, 'Error: ' + error.message);
+        });
+};
+
+// Function to request the PIN for 2FA setup
+window.requestPIN = function (userEmail, feedbackElement, twoStepVerificationInput) {
+    fetch('/setup_2fa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: userEmail })
+    })
+        .then(response => response.json())
+        .then(data => {
+            feedbackElement.innerText = data.message;
+            // Ensure the PIN input field is visible after request
+            twoStepVerificationInput.style.display = 'block';
+        })
+        .catch(error => {
+            feedbackElement.innerText = 'Error: ' + error.message;
+            twoStepVerificationInput.style.display = 'none';
+        });
+};
+
+// Function to verify the PIN entered by the user
+window.verifyPIN = function (userEmail, feedbackElement, twoStepVerificationInput) {
+    const pin = document.getElementById('twoStepPin').value;
+    const verifyPinBtn = document.getElementById('verifyPinBtn'); // Get the verify button
+    if (!pin || pin.length !== 4) {
+        displayMessageAndHide(feedbackElement, 'Please enter a valid 4-digit PIN.');
+        return;
+    }
+
+    fetch('/verify_2fa_enable', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: userEmail, pin: pin })
+    })
+        .then(response => response.json())
+        .then(data => {
+            displayMessageAndHide(feedbackElement, data.message);
+            if (data.message === '2FA verification successful!') {
+                // Hide the PIN input, verify button, and their container upon successful verification
+                document.getElementById('twoStepPin').style.display = 'none';
+                verifyPinBtn.style.display = 'none';
                 twoStepVerificationInput.style.display = 'none';
-            })
-            .catch(error => {
-                displayMessageAndHide(feedbackElement, 'Error: ' + error.message);
-            });
-    };
-
-    window.requestPIN = function (userEmail, feedbackElement, twoStepVerificationInput) {
-        fetch('/setup_2fa', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: userEmail })
+            }
         })
-            .then(response => response.json())
-            .then(data => {
-                feedbackElement.innerText = data.message;
-                twoStepVerificationInput.style.display = 'block';
-            })
-            .catch(error => {
-                feedbackElement.innerText = 'Error: ' + error.message;
-                twoStepVerificationInput.style.display = 'none';
-            });
-    };
+        .catch(error => {
+            displayMessageAndHide(feedbackElement, 'Error verifying PIN: ' + error.message);
+        });
+};
 
-    window.verifyPIN = function (userEmail, feedbackElement, twoStepVerificationInput) {
-        const pin = document.getElementById('twoStepPin').value;
-        const verifyPinBtn = document.getElementById('verifyPinBtn'); // Get the verify button
-        if (!pin || pin.length !== 4) {
-            displayMessageAndHide(feedbackElement, 'Please enter a valid 4-digit PIN.');
-            return;
-        }
-
-        fetch('/verify_2fa_enable', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: userEmail, pin: pin })
+// Function to fetch and update the 2FA toggle based on current status
+window.update2FAToggle = function () {
+    fetch('/get_2fa_status')
+        .then(response => response.json())
+        .then(data => {
+            if (data['2fa_enabled'] !== undefined) {
+                document.getElementById('twoStepVerification').checked = data['2fa_enabled'];
+            }
         })
-            .then(response => response.json())
-            .then(data => {
-                displayMessageAndHide(feedbackElement, data.message);
-                if (data.message === '2FA verification successful!') {
-                    // Hide the PIN input, verify button, and their container upon successful verification
-                    document.getElementById('twoStepPin').style.display = 'none';
-                    verifyPinBtn.style.display = 'none';
-                    twoStepVerificationInput.style.display = 'none';
-                }
-            })
-            .catch(error => {
-                displayMessageAndHide(feedbackElement, 'Error verifying PIN: ' + error.message);
-            });
-    };
+        .catch(error => console.error('Error fetching 2FA status:', error));
+};
 
-    window.update2FAToggle = function () {
-        fetch('/get_2fa_status')
-            .then(response => response.json())
-            .then(data => {
-                if (data['2fa_enabled'] !== undefined) {
-                    document.getElementById('twoStepVerification').checked = data['2fa_enabled'];
-                }
-            })
-            .catch(error => console.error('Error fetching 2FA status:', error));
-    };
+// Function to reset PIN input and display the verification section
+function resetPINInput(twoStepVerificationInput) {
+    const pinInput = document.getElementById('twoStepPin');
+    const verifyPinBtn = document.getElementById('verifyPinBtn');
+
+    // Clear any existing value in the PIN input
+    pinInput.value = '';
+
+    // Ensure the input field and button are visible
+    pinInput.style.display = 'block';
+    verifyPinBtn.style.display = 'block';
+
+    // Make sure the whole section is visible
+    twoStepVerificationInput.style.display = 'block';
+}
+
+// Helper function to display messages and hide elements after some time
+function displayMessageAndHide(element, message, timeout = 3000) {
+    element.innerText = message;
+    setTimeout(() => {
+        element.innerText = '';  // Clear the message after 3 seconds
+    }, timeout);
+}
+
+
 
     // ----------------------------
     // Password Management / Toggle Visibilities
@@ -812,7 +849,7 @@ function updateStrengthIndicator(strength) {
                 .then(data => {
                     if (data.success) {
                         alert(data.message);
-                        window.location.href = '/';
+                        window.location.href = '/login';
                     } else {
                         alert(data.message);
                     }
@@ -889,24 +926,43 @@ function updateStrengthIndicator(strength) {
     // Password List Management
     // ----------------------------
 
-    window.deleteEntry = function (website, email, password) {
-        if (confirm('Are you sure you want to delete this entry?')) {
-            fetch('/delete-password', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ website: website, email: email, password: password })
-            }).then(response => {
-                if (response.ok) {
-                    alert('Entry deleted successfully');
-                    window.location.reload();
-                } else {
-                    alert('Failed to delete entry');
-                }
-            });
-        }
-    };
+window.deleteEntry = function (website, email, password) {
+    // Log the values to check if they are properly passed
+    console.log('Website:', website);
+    console.log('Email:', email);
+    console.log('Password:', password);
+
+    if (!website || !email || !password) {
+        alert('Error: Missing required data.');  // Check if any field is missing
+        return;
+    }
+
+    if (confirm('Are you sure you want to delete this entry?')) {
+        const data = { website: website, email: email, password: password };
+        console.log('Sending data:', data);  // Log the data you're sending
+
+        fetch('/delete-password', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        }).then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert('Entry deleted successfully');
+                window.location.reload();
+            } else {
+                alert('Failed to delete entry: ' + data.message);
+            }
+        }).catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while deleting the entry');
+        });
+    }
+};
+
+
 
     // ----------------------------
     // Animal ID Functionality
