@@ -1,5 +1,5 @@
 .PopupExtension {
-    width: 300px;  /* Set a fixed width for the popup */
+    width: 330px;  /* Set a fixed width for the popup */
     font-size: 0.9rem;
 }
 
@@ -19,4 +19,8 @@
 
 #loggedInAs {
     font-size: 0.9em;
+}
+
+#logoutBtn {
+    margin-bottom: 20px;
 }
