@@ -24,6 +24,17 @@
                     <label class="form-check-label" for="twoStepVerification"></label>
                 </div>
             </li>
+
+            <!-- PIN Input for 2FA -->
+            <div id="twoStepVerificationInput" style="display: none;">
+                <label for="twoStepPin" class="visually-hidden">Enter your 4-digit PIN</label>
+                <input type="number" id="twoStepPin" class="form-control mb-2" placeholder="Enter 4-digit PIN" aria-label="Enter your 4-digit PIN">
+                <button id="verifyPinBtn" class="btn btn-primary">Verify PIN</button>
+            </div>
+
+            <!-- Feedback Messages -->
+            <div id="twoStepFeedback" class="text-muted mt-2"></div>
+
             <li class="mb-4 d-flex justify-content-between align-items-center">
                 <span>Add Family Account</span>
                 <div>
