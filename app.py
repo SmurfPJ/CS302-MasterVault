@@ -48,6 +48,12 @@ def setSessionID(userID):
     sessionID = userID
 
 
+@app.context_processor
+def inject_account_type():
+    accountType = session.get('accountType', None)
+    return dict(accountType=accountType)
+
+
 def generate_password(phrase, length, exclude_numbers=False, exclude_symbols=False, replace_vowels=False,
                       remove_vowels=False, randomize=False):
     # Always start with letters as the base characters
@@ -120,27 +126,18 @@ def generate_password(phrase, length, exclude_numbers=False, exclude_symbols=Fal
 
 
 def getPasswords(passwordID):
-    # Retrieve sessionID from session and convert to ObjectId
-    sessionID = session.get('sessionID')
-
-    if not sessionID:
-        print("Session ID not found. Please log in.")
-        return []
-
-    # Convert sessionID to ObjectId for MongoDB query
-    searchPasswords = userPasswords.find_one({'_id': ObjectId(sessionID)})
+    # Convert passwordID to ObjectId for MongoDB query
+    searchPasswords = userPasswords.find_one({'_id': ObjectId(passwordID)})
 
     userList = []
     currentList = []
 
     # If no passwords are found for the user, insert a new document
     if searchPasswords is None:
-        userPasswords.insert_one({"_id": ObjectId(sessionID)})
-
-        userPasswords.insert_one({"_id": sessionID})
+        userPasswords.insert_one({"_id": ObjectId(passwordID)})
 
     if not searchPasswords:
-        print("No userData found")
+        print("No password data found for this user")
         return []
 
     # Process each key-value pair in the user's password data
@@ -148,14 +145,11 @@ def getPasswords(passwordID):
         if key == '_id':
             continue  # Skip the '_id' key
 
-        # print(f"Processing field: {key} with value: {value}")
-        
-        # Decrypt the value if it is not None
+        # Decrypt the value if necessary
         # if "createdDate" not in key and "passwordLocked" not in key and value != None:
         #     value = decrypt(value)
-        #     print(f"Processing field: {key} with decrypted value: {value}")
 
-        currentList.append(value)  # Store the (possibly decrypted) value to the list
+        currentList.append(value)  # Store the value to the list
 
         # If the account reaches the max length, add the list to userList
         if len(currentList) == ACCOUNT_METADATA_LENGTH:
@@ -171,27 +165,36 @@ def getPasswords(passwordID):
 
 
 
-def getFamilyMembers():
-    
-    familyGroup = familyData.find_one({'_id': sessionID})
+
+def getFamilyMembers(sessionID):
+    # Ensure sessionID is an ObjectId
+    familyGroup = familyData.find_one({'_id': ObjectId(sessionID)})
+
+    # Check if the familyGroup is None (no record found)
+    if not familyGroup:
+        print("No family group found for sessionID:", sessionID)
+        return []
+
     currentList = []
     childList = []
 
+    # Iterate through familyGroup items
     for key, value in familyGroup.items():
         if key == '_id' or key == 'familyID':
-            continue  # Skip the '_id' key
+            continue  # Skip the '_id' and 'familyID' keys
 
         currentList.append(value)
 
         if len(currentList) == 2:
             childList.append(currentList)
             currentList = []
-    
+
     if currentList:
         childList.append(currentList)
 
     print("Child Accounts: ", childList)
     return childList
+
 
   
 
@@ -330,27 +333,28 @@ def login():
                     session['username'] = findPost["username"]
                     session['email'] = email
 
+                    # Set accountType in the session
+                    session['accountType'] = findPost.get('accountType', 'personal')
+
+                    # Check if accountType is family
+                    if session['accountType'] == 'family':
+                        session['familyID'] = findPost.get('familyID', None)
+
                     # Check if 2FA is enabled in the user's settings
                     if findPost.get("2FA", False):
-                        # Generate a 4-digit PIN for 2FA
                         pin = random.randint(1000, 9999)
-
-                        # Send the 2FA PIN for login
                         send_2fa_verification_email(email, pin, purpose='login')
-
-                        # Store the 2FA PIN temporarily for verification
                         store_pin(email, pin)
-
-                        # Redirect to the 2FA login verification page
                         return redirect(url_for('two_fa_verify'))
 
-                    # If 2FA is not enabled, proceed to normal flow (animal verification)
                     return redirect(url_for('animalIDVerification'))
 
             flash("Invalid email")
             return render_template("login.html", form=cform)
 
     return render_template("login.html", form=LoginForm())
+
+
 
 @app.route('/extension_login', methods=['POST'])
 def login_extension():
@@ -531,44 +535,57 @@ def register():
         dob = cform.dob.data
         timeNow = datetime.now()
         dobTime = datetime(year=dob.year, month=dob.month, day=dob.day, hour=0, minute=0, second=0)
-        idCounter = 1
 
         # Prepare the user data post
         post = {
-                    "username": cform.username.data,
-                    "email": cform.email.data,
-                    "DOB": dobTime,
-                    "loginPassword": cform.password.data,
-                    "animalID": None,
-                    "accountType": cform.account_type.data,
-                    "masterPassword": None,
-                    "2FA": False,
-                    "accountLocked": "Unlocked",
-                    "lockDuration": "empty",
-                    "lockTimestamp": timeNow
-                }
+            "username": cform.username.data,
+            "email": cform.email.data,
+            "DOB": dobTime,
+            "loginPassword": cform.password.data,
+            "animalID": None,
+            "accountType": cform.account_type.data,
+            "masterPassword": None,
+            "2FA": False,
+            "accountLocked": "Unlocked",
+            "lockDuration": "empty",
+            "lockTimestamp": timeNow
+        }
 
+        # Insert the user data into the database
         userData.insert_one(post)
 
+        # Retrieve the inserted document
         findPost = userData.find_one(post)
 
         # Store the _id in the session as a string
         session['sessionID'] = str(findPost['_id'])
+        session['accountType'] = cform.account_type.data  # Store the accountType in the session
 
         # Insert the user ID into the userPasswords collection
         userPasswords.insert_one({"_id": ObjectId(session['sessionID'])})
 
+        # Check if the user chose the 'family' account type
         if cform.account_type.data == "family":
-            for i in userData.find():
-                if 'familyID' in i and isinstance(i['familyID'], int):
-                    idCounter += 1
+            # Find the highest familyID, if present, and increment it
+            lastFamilyID = familyData.find_one(sort=[("familyID", -1)])  # Find the highest familyID
 
+            # Set the familyID for this family account
+            idCounter = lastFamilyID['familyID'] + 1 if lastFamilyID else 1
+
+            # Create a family post for the user
             familyPost = {
                 "_id": ObjectId(session['sessionID']),
                 "familyID": idCounter
             }
 
+            # Insert family post into familyData collection
             familyData.insert_one(familyPost)
+
+            # Also update the userData collection to reflect the familyID
+            userData.update_one(
+                {'_id': ObjectId(session['sessionID'])},
+                {'$set': {"familyID": idCounter}}
+            )
 
         # Send verification email after successfully saving account details
         send_verification_email(cform.email.data)
@@ -577,6 +594,8 @@ def register():
         return redirect(url_for('animal_id'))
 
     return render_template("register.html", form=cform)
+
+
 
 
  
@@ -967,48 +986,58 @@ def passwordList():
 
 @app.route('/familyPasswordList', methods=['GET', 'POST'])
 def familyPasswordList():
-    findPost = userData.find_one({'_id': sessionID})
+    sessionID = session.get('sessionID')
+
+    if not sessionID:
+        flash('User not logged in. Please log in first.', 'warning')
+        return redirect(url_for('login'))
+
+    findPost = userData.find_one({'_id': ObjectId(sessionID)})
+
+    if not findPost:
+        flash('User not found. Please try again.', 'error')
+        return redirect(url_for('login'))
+
     passwordID = sessionID  # Default to current user
 
     if 'username' in session:
         if findPost.get('accountLocked') == "Locked":
             return redirect(url_for('lockedPasswordList'))
         elif findPost.get('accountLocked') == "Unlocked":
-            familyMembers = getFamilyMembers()
+            familyMembers = getFamilyMembers(sessionID)
 
-            # Handle form submission and account switching
             if request.method == 'POST':
                 selectedAccount = request.form.get('familyAccountSelect')
-                
-                if selectedAccount == 'current_user':
-                    passwordID = sessionID  # Set to current user if 'current_user' is selected
-                else:
-                    passwordID = selectedAccount  # Set to selected child's ID
 
+                # Set passwordID based on the selected account in the form
+                if selectedAccount and selectedAccount != 'current_user':
+                    passwordID = selectedAccount  # Set to the selected family member's ID
+
+            # Use passwordID to retrieve the correct account's passwords
             userPasswordList = getPasswords(passwordID)
 
             if not userPasswordList:
-                return render_template('passwordListFamily.html', passwords=[], family_accounts=familyMembers, selected_account_id=passwordID)
+                return render_template(
+                    'passwordListFamily.html',
+                    passwords=[],
+                    family_accounts=familyMembers,
+                    selected_account_id=passwordID
+                )
 
-            return render_template('passwordListFamily.html', passwords=userPasswordList, family_accounts=familyMembers, selected_account_id=passwordID)
+            return render_template(
+                'passwordListFamily.html',
+                passwords=userPasswordList,
+                family_accounts=familyMembers,
+                selected_account_id=passwordID
+            )
     else:
         flash('Please log in to access your passwords.', 'warning')
         return redirect(url_for('login'))
 
     return render_template('passwordListFamily.html')
 
-    if not sessionID:
-        return redirect(url_for('login'))
 
-    user_data = userData.find_one({"_id": ObjectId(sessionID)})
 
-    if not user_data:
-        # Handle the case where the user is not found
-        return "User not found", 404
-
-    account_type = user_data.get('accountType', 'personal')
-
-    return render_template('passwordListFamily.html', accountType=account_type, userData=user_data)
 
 
 @app.route('/lockedPasswordList', methods=['GET'])
