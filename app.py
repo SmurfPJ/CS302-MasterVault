@@ -318,10 +318,11 @@ def landing_page():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     cform = LoginForm()
+
     if request.method == 'POST':
         email = cform.email.data
 
-        if email is not None:
+        if email:
             findPost = userData.find_one({"email": email})
 
             if findPost:
@@ -333,12 +334,15 @@ def login():
                     session['username'] = findPost["username"]
                     session['email'] = email
 
-                    # Set accountType in the session
+                    # Set account type in the session
                     session['accountType'] = findPost.get('accountType', 'personal')
 
                     # Check if accountType is family
                     if session['accountType'] == 'family':
                         session['familyID'] = findPost.get('familyID', None)
+
+                    # Detect if the user is a child account based on child ID
+                    session['is_child_account'] = is_child_account(session['sessionID'])
 
                     # Check if 2FA is enabled in the user's settings
                     if findPost.get("2FA", False):
@@ -347,13 +351,13 @@ def login():
                         store_pin(email, pin)
                         return redirect(url_for('two_fa_verify'))
 
+                    # Redirect to animal ID verification if no 2FA
                     return redirect(url_for('animalIDVerification'))
 
             flash("Invalid email")
             return render_template("login.html", form=cform)
 
     return render_template("login.html", form=LoginForm())
-
 
 
 @app.route('/extension_login', methods=['POST'])
@@ -987,54 +991,59 @@ def passwordList():
 @app.route('/familyPasswordList', methods=['GET', 'POST'])
 def familyPasswordList():
     sessionID = session.get('sessionID')
-
     if not sessionID:
         flash('User not logged in. Please log in first.', 'warning')
         return redirect(url_for('login'))
 
+    # Retrieve user data from MongoDB using the session ID
     findPost = userData.find_one({'_id': ObjectId(sessionID)})
-
     if not findPost:
         flash('User not found. Please try again.', 'error')
         return redirect(url_for('login'))
 
-    passwordID = sessionID  # Default to current user
-
-    if 'username' in session:
-        if findPost.get('accountLocked') == "Locked":
-            return redirect(url_for('lockedPasswordList'))
-        elif findPost.get('accountLocked') == "Unlocked":
-            familyMembers = getFamilyMembers(sessionID)
-
-            if request.method == 'POST':
-                selectedAccount = request.form.get('familyAccountSelect')
-
-                # Set passwordID based on the selected account in the form
-                if selectedAccount and selectedAccount != 'current_user':
-                    passwordID = selectedAccount  # Set to the selected family member's ID
-
-            # Use passwordID to retrieve the correct account's passwords
-            userPasswordList = getPasswords(passwordID)
-
-            if not userPasswordList:
-                return render_template(
-                    'passwordListFamily.html',
-                    passwords=[],
-                    family_accounts=familyMembers,
-                    selected_account_id=passwordID
-                )
-
-            return render_template(
-                'passwordListFamily.html',
-                passwords=userPasswordList,
-                family_accounts=familyMembers,
-                selected_account_id=passwordID
-            )
+    # Default to sessionID if no family account is selected
+    if request.method == 'POST':
+        selectedAccount = request.form.get('accountSelect')
+        if selectedAccount and selectedAccount != 'current_user':
+            accountID = ObjectId(selectedAccount)  # Set to selected family member's ID
+        else:
+            accountID = ObjectId(sessionID)  # Use sessionID for the current user
     else:
-        flash('Please log in to access your passwords.', 'warning')
-        return redirect(url_for('login'))
+        accountID = ObjectId(sessionID)
 
-    return render_template('passwordListFamily.html')
+    # Check if the account is unlocked
+    if findPost.get('accountLocked') == "Locked":
+        return redirect(url_for('lockedPasswordList'))
+
+    # Get family members for the dropdown menu
+    familyMembers = getFamilyMembers(sessionID)
+
+    # Retrieve passwords for the selected account
+    userPasswordList = getPasswords(accountID)
+
+    return render_template(
+        'passwordListFamily.html',
+        passwords=userPasswordList or [],
+        family_accounts=familyMembers,
+        selected_account_id=accountID
+    )
+
+def is_child_account(sessionID):
+    # Search for any field starting with 'childID' that matches the sessionID
+    child_record = familyData.find_one({
+        "$expr": {
+            "$in": [ObjectId(sessionID), {"$map": {
+                "input": {"$objectToArray": "$$ROOT"},
+                "as": "field",
+                "in": {"$cond": [{"$regexMatch": {"input": "$$field.k", "regex": "^childID"}}, "$$field.v", None]}
+            }}]
+        }
+    })
+    # Return True if any matching child ID field is found
+    return child_record is not None
+
+
+
 
 
 

@@ -1,15 +1,10 @@
-
-(function () {
-    // ----------------------------
-    // Global Variables
-    // ----------------------------
-    let globalTimerInterval = null;
+let globalTimerInterval = null;
 
     // ----------------------------
     // Utility Functions
     // ----------------------------
 
-    function capitalizeFirstLetter(string) {
+ function capitalizeFirstLetter(string) {
         return string.charAt(0).toUpperCase() + string.slice(1);
     }
 
@@ -409,7 +404,7 @@
     };
 
     window.toggleConfirmMasterPasswordVisibility = function () {
-        const confirmMasterPasswordInput = document.getElementById('confirmMaster_password');
+        const confirmMasterPasswordInput = document.getElementById('confirm_master_password');
         const toggleConfirmMasterPasswordIcon = document.getElementById('toggleConfirmMasterPasswordIcon');
         if (confirmMasterPasswordInput.type === 'password') {
             confirmMasterPasswordInput.type = 'text';
@@ -422,7 +417,7 @@
 
     window.checkMasterPasswordMatch = function () {
         const masterPassword = document.getElementById('master_password').value;
-        const confirmMasterPassword = document.getElementById('confirmMaster_password').value;
+        const confirmMasterPassword = document.getElementById('confirm_master_password').value;
         const passwordMatchMessage = document.getElementById('passwordMatchMessage');
 
         if (masterPassword === confirmMasterPassword) {
@@ -1212,23 +1207,7 @@
             .catch(error => {
                 feedbackElement.innerText = 'Error: ' + error.message;
             });
-    });
-})
+    })
 
-
-    // ----------------------------
-    // Family Account Switch Accounts
-    // ----------------------------
-// document.getElementById('familyAccountSelect').addEventListener('change', function() {
-//     const selected_account_id = this.value;
-//
-//     console.log("Selected Password ID:", selected_account_id) // Log the selected value
-//
-//     if (selected_account_id) {
-//         // Submit the form automatically when an account is selected
-//         this.form.submit();
-//     }
-// });
-// })();
 
 
