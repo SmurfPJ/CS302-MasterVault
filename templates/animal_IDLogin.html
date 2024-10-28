@@ -21,20 +21,20 @@
                 <p>{{ selected_animal }}</p> <!-- Debugging output -->
             </div>
             <div class="col-md-4">
-                <p>Please do not enter your password if this picture is different from the one you have selected during registration.</p>
-                <form method="POST" action="">
-                    <div class="form-group mb-3">
-                        <input type="password" class="form-control" placeholder="Password" name="password" required>
-                    </div>
-                    <div class="form-check mb-3">
-                        <input type="checkbox" class="form-check-input" id="securityCheck" name="securityCheck" onchange="toggleSecurityCheckButton()">
-                        <label class="form-check-label ms-2" for="securityCheck">Yes, this is my security picture</label>
-                    </div>
-                    <div class="form-group text-center">
-                        <button type="submit" class="btn btn-primary w-100" id="confirmButton" disabled>CONFIRM</button>
-                    </div>
-                </form>
-            </div>
+    <p>Please do not enter your password if this picture is different from the one you have selected during registration.</p>
+    <form method="POST" action="">
+        <div class="form-group mb-3">
+            <input type="password" class="form-control" placeholder="Password" name="password" required>
+        </div>
+        <div class="form-check mb-3">
+            <input type="checkbox" class="form-check-input" id="securityCheck" name="securityCheck" onchange="toggleSecurityCheckButton()">
+            <label class="form-check-label ms-2" for="securityCheck">Yes, this is my security picture</label>
+        </div>
+        <div class="form-group text-center">
+            <button type="submit" class="btn btn-primary w-100" id="confirmButton" disabled>CONFIRM</button>
+        </div>
+    </form>
+</div>
         </div>
     </div>
 </body>
