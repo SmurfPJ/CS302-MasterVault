@@ -722,16 +722,17 @@ def addPassword():
 
             # Validate options and generate password
             if not use_numbers and not use_symbols:
-                error = "Please select at least one option: Use Numbers or Use Symbols."
-            else:
-                password = generate_password(keyword, length, use_numbers, use_symbols, replace_vowels, replace_most_frequent_vowel, remove_vowels, randomize)
-                strength = check_password_strength(password)
-                if not password:
-                    error = "Failed to generate password. Ensure the keyword is shorter than the desired password length."
-                else:
-                    return jsonify({'password': password, 'strength': strength})
+                return jsonify({'error': 'Please select at least one option: Use Numbers or Use Symbols.'})
 
-            return jsonify({'error': 'Failed to generate password.'})
+            password = generate_password(
+                keyword, length, use_numbers, use_symbols, replace_vowels,
+                replace_most_frequent_vowel, remove_vowels, randomize
+            )
+            strength = check_password_strength(password)
+            if not password:
+                return jsonify({'error': 'Failed to generate password. Ensure the keyword is shorter than the desired password length.'})
+            else:
+                return jsonify({'password': password, 'strength': strength})
 
         else:
             # Add password form was submitted
@@ -748,11 +749,17 @@ def addPassword():
                 'other': request.form.get('other')
             }
 
+            # Save the new password with additional fields
             saveNewPassword(website, username, password, additional_fields)
-            return redirect(url_for('passwordList'))
 
+            # Redirect based on account type
+            if accountType == 'family':
+                return redirect(url_for('familyPasswordList'))
+            else:
+                return redirect(url_for('passwordList'))
 
     return render_template('addPassword.html', accountType=accountType)
+
 
 
 def saveNewPassword(website, username, password, additional_fields):
@@ -825,10 +832,11 @@ def passwordView(name):
 
     if not searchPasswords:
         print("No passwords found for the user.")
-        return redirect(url_for('passwordList'))
+        return redirect(url_for('familyPasswordList' if accountType == 'family' else 'passwordList'))
 
     password_data = {}
 
+    # Find the specific password entry by name
     for i in range(1, len(searchPasswords)):
         if searchPasswords.get(f"name{i}") == name:
             password_data = {
@@ -860,9 +868,14 @@ def passwordView(name):
 
         updatePassword(name, new_data)
 
-        return redirect(url_for('passwordList'))
+        # Redirect based on account type
+        if accountType == 'family':
+            return redirect(url_for('familyPasswordList'))
+        else:
+            return redirect(url_for('passwordList'))
 
     return render_template('passwordView.html', password_data=password_data, accountType=accountType)
+
 
 
 def updatePassword(name, new_data):
@@ -1389,9 +1402,19 @@ def unlock_account():
     if verify_and_unlock_account(master_password, sessionID):
         session.pop('lock_state', None)
         session.pop('unlock_time', None)
+
+        # Restore family account context
+        findPost = userData.find_one({'_id': ObjectId(sessionID)})
+        session['accountType'] = findPost.get('accountType', 'personal')
+        if session['accountType'] == 'family':
+            session['familyID'] = findPost.get('familyID')
+            # Reset is_child_account if needed
+            session['is_child_account'] = is_child_account(sessionID)
+
         return jsonify({'status': 'success', 'message': 'Account unlocked'})
     else:
         return jsonify({'status': 'error', 'message': 'Incorrect master password'}), 401
+
 
 def verify_and_unlock_account(master_password, sessionID):
     findPost = userData.find_one({'_id': ObjectId(sessionID)})
