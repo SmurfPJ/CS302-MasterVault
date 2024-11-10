@@ -919,41 +919,72 @@ let globalTimerInterval = null;
     // Password List Management
     // ----------------------------
 
-    window.deleteEntry = function (website, email, password) {
-        // Log the values to check if they are properly passed
-        console.log('Website:', website);
-        console.log('Email:', email);
-        console.log('Password:', password);
+    // window.deleteEntry = function (website, email, password) {
+    //     // Log the values to check if they are properly passed
+    //     console.log('Website:', website);
+    //     console.log('Email:', email);
+    //     console.log('Password:', password);
 
-        if (!website || !email || !password) {
-            alert('Error: Missing required data.');  // Check if any field is missing
-            return;
+    //     if (!website || !email || !password) {
+    //         alert('Error: Missing required data.');  // Check if any field is missing
+    //         return;
+    //     }
+
+    //     if (confirm('Are you sure you want to delete this entry?')) {
+    //         const data = {website: website, email: email, password: password};
+    //         console.log('Sending data:', data);  // Log the data you're sending
+
+    //         fetch('/delete-password', {
+    //             method: 'POST',
+    //             headers: {
+    //                 'Content-Type': 'application/json'
+    //             },
+    //             body: JSON.stringify(data)
+    //         }).then(response => response.json())
+    //             .then(data => {
+    //                 if (data.status === 'success') {
+    //                     alert('Entry deleted successfully');
+    //                     window.location.reload();
+    //                 } else {
+    //                     alert('Failed to delete entry: ' + data.message);
+    //                 }
+    //             }).catch(error => {
+    //             console.error('Error:', error);
+    //             alert('An error occurred while deleting the entry');
+    //         });
+    //     }
+    // };
+
+
+
+function deleteEntry(password) {
+    console.log("Password identifier received:", password);
+
+    if (!password) {
+        alert("Password identifier is missing!");
+        return;
+    }
+
+    fetch(`/deleteEntry/${password}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
         }
-
-        if (confirm('Are you sure you want to delete this entry?')) {
-            const data = {website: website, email: email, password: password};
-            console.log('Sending data:', data);  // Log the data you're sending
-
-            fetch('/delete-password', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            }).then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        alert('Entry deleted successfully');
-                        window.location.reload();
-                    } else {
-                        alert('Failed to delete entry: ' + data.message);
-                    }
-                }).catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred while deleting the entry');
-            });
+    })
+    .then(response => {
+        console.log("Server responded with status:", response.status);
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert("Failed to delete entry.");
         }
-    };
+    })
+    .catch(error => console.error('Fetch error:', error));  // Logs any network issues
+} 
 
 
     // ----------------------------
