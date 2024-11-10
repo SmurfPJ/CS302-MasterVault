@@ -3,18 +3,13 @@ from Crypto.Protocol.KDF import PBKDF2
 from Crypto.Random import get_random_bytes
 import base64
 
-from pymongo import MongoClient
-from bson.objectid import ObjectId
+
 
 SALT_SIZE = 16
 KEY_SIZE = 32
 ITERATIONS = 100000
 
-client = MongoClient('mongodb+srv://Conor:M0ng0DB1@mastervaultdb1.g1a7o98.mongodb.net/')
-db = client.MasterVault
-userData = db["userData"]
-userPasswords = db["userPasswords"]
-familyData = db["familyData"]
+
 
 def pad(data):
     pad_len = 16 - (len(data) % 16)
@@ -48,11 +43,25 @@ def decrypt(ciphertext):
     return plaintext.decode('utf-8')
 
 
-def main():
+# from pymongo import MongoClient
+# from bson.objectid import ObjectId
 
-    docID = '670c5affe8916d09773ebcb0'
+
+# client = MongoClient('mongodb+srv://Conor:M0ng0DB1@mastervaultdb1.g1a7o98.mongodb.net/')
+# db = client.MasterVault
+# userData = db["userData"]
+# userPasswords = db["userPasswords"]
+# familyData = db["familyData"]
+
+# def main():
+
+#     docID = '670c5affe8916d09773ebcb0'
     # familyData.update_one({"familyID": 1}, {"$set": {"member1": '66a6f5614607d5f3fae7b3fa'}})
-    print(familyData.find_one({"_id": ObjectId('670c5affe8916d09773ebcb0')}))
+    # print(familyData.find_one({"_id": ObjectId('670c5affe8916d09773ebcb0')}))
+
+    # userPasswords.update_one({"_id": sessionID}, { "$unset": { "username1": "" }})
+
+    print(userPasswords.find_one({"_id": ObjectId('6729665217c3489ff7992026')}))
 
     # plainText = input("Password: ")
 
