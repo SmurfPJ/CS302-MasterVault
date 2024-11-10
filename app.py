@@ -1090,6 +1090,9 @@ def is_child_account(sessionID):
 def lockedPasswordList():
     return render_template('lockedPasswordList.html')
 
+@app.route('/lockedPasswordList', methods=['GET'])
+def lockedPasswordList():
+    return render_template('lockedPasswordList.html')
 
 # @app.route('/delete-password', methods=['POST'])
 # def delete_password():
@@ -1178,6 +1181,11 @@ def deleteEntry(entryIndex):
         print(f"Failed to delete entry {entryIndex}.")
         return False
 
+    # Use $unset to remove the entry
+    result = userPasswords.update_one(
+        {"_id": ObjectId(sessionID)},
+        {"$unset": fieldsToUnset}
+    )
 
 
 def remove_passwordList_entry(username, website, email, password):

@@ -59,6 +59,10 @@ def decrypt(ciphertext):
     # familyData.update_one({"familyID": 1}, {"$set": {"member1": '66a6f5614607d5f3fae7b3fa'}})
     # print(familyData.find_one({"_id": ObjectId('670c5affe8916d09773ebcb0')}))
 
+    # userPasswords.update_one({"_id": sessionID}, { "$unset": { "username1": "" }})
+
+    print(userPasswords.find_one({"_id": ObjectId('6729665217c3489ff7992026')}))
+
     # plainText = input("Password: ")
 
     # encrypted = encrypt(plainText)

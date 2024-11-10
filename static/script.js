@@ -987,6 +987,30 @@ function deleteEntry(password) {
 } 
 
 
+    function deleteEntry(website, email, password) {
+        fetch('/deleteEntry', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ website: website, email: email, password: password })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert('Password entry deleted successfully.');
+                location.reload(); // Reload the page to refresh the password list
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to delete password entry.');
+        });
+    }
+
+
     // ----------------------------
     // Animal ID Functionality
     // ----------------------------
