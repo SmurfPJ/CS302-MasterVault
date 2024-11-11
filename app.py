@@ -124,7 +124,6 @@ def generate_password(phrase, length, exclude_numbers=False, exclude_symbols=Fal
 
 
 
-
 def getPasswords(passwordID):
     # Convert passwordID to ObjectId for MongoDB query
     searchPasswords = userPasswords.find_one({'_id': ObjectId(passwordID)})
@@ -194,7 +193,13 @@ def getFamilyMembers(sessionID):
     print("Child Accounts: ", childList)
     return childList
 
-  
+
+
+def getEncryptKey(findPost):
+    encryptionKey = f"{findPost['_id']} {findPost['DOB']}"
+    return encryptionKey
+
+
 
 def check_password_strength(password):
     strength = {'status': 'Weak', 'score': 0, 'color': 'red'}
@@ -492,7 +497,9 @@ def animalIDVerification():
                 session['lock_state'] = 'locked'
                 session['unlock_time'] = lock_timestamp
 
-                flash('Incorrect password or security check not confirmed', 'danger')
+                return jsonify({'status': 'success', 'message': 'Account locked'})
+            else:
+                return jsonify({'status': 'error', 'message': 'Failed to lock account'})
 
     return render_template('animal_IDLogin.html', selected_animal=selected_animal)
 
@@ -741,7 +748,7 @@ def master_password():
         if master_password == request.form['confirmMaster_password']:
             # Encrypt and update the master password
             encrypted_password = master_password
-            userData.update_one({"_id": ObjectId(sessionID)}, {"$set": {"masterPassword": encrypted_password}})
+            userData.update_one({"_id": ObjectId(sessionID)}, {"$set": {"masterPassword": encrypt(encrypted_password, getEncryptKey(findPost))}})
 
             # Check if the user has a family account
             account_type = findPost.get('accountType', 'personal')
@@ -867,6 +874,7 @@ def saveNewPassword(website, username, password, additional_fields):
 
 @app.route('/passwordView/<name>', methods=['GET', 'POST'])
 def passwordView(name):
+
     accountType = session.get('accountType', 'family')
 
     sessionID = session.get('sessionID')
@@ -1014,6 +1022,8 @@ def passwordList():
 
     findPost = userData.find_one({'_id': ObjectId(sessionID)})
 
+    print("Decrypted Master Password: ", decrypt(findPost['masterPassword'], getEncryptKey(findPost)))
+
     if 'username' in session:
         # Check if the account is locked or unlocked
         if findPost.get('accountLocked') == "Locked":
@@ -1090,10 +1100,6 @@ def is_child_account(sessionID):
 def lockedPasswordList():
     return render_template('lockedPasswordList.html')
 
-@app.route('/lockedPasswordList', methods=['GET'])
-def lockedPasswordList():
-    return render_template('lockedPasswordList.html')
-
 # @app.route('/delete-password', methods=['POST'])
 # def delete_password():
 #     data = request.get_json()
@@ -1139,8 +1145,8 @@ def lockedPasswordList():
 #     return jsonify({'status': 'error', 'message': 'Entry not found'}), 404
 
 @app.route('/deleteEntry/<password>', methods=['POST'])
-def deleteEntry(entryIndex):
-    print("Delete function triggered with ID: ", entryIndex)  # To confirm if the function runs
+def deleteEntry(password):
+    print("Delete function triggered with ID: ", password)  # To confirm if the function runs
 
     if not sessionID:
         raise ValueError("Session ID not found. Please log in.")
@@ -1154,17 +1160,17 @@ def deleteEntry(entryIndex):
 
     # Define the fields to delete based on the entry index
     fieldsToDelete = {
-        f"name{entryIndex}": "",
-        f"createdDate{entryIndex}": "",
-        f"website{entryIndex}": "",
-        f"username{entryIndex}": "",
-        f"email{entryIndex}": "",
-        f"accountNumber{entryIndex}": "",
-        f"pin{entryIndex}": "",
-        f"date{entryIndex}": "",
-        f"password{entryIndex}": "",
-        f"other{entryIndex}": "",
-        f"passwordLocked{entryIndex}": ""
+        f"name{password}": "",
+        f"createdDate{password}": "",
+        f"website{password}": "",
+        f"username{password}": "",
+        f"email{password}": "",
+        f"accountNumber{password}": "",
+        f"pin{password}": "",
+        f"date{password}": "",
+        f"password{password}": "",
+        f"other{password}": "",
+        f"passwordLocked{password}": ""
     }
     print(fieldsToDelete)
 
@@ -1175,10 +1181,10 @@ def deleteEntry(entryIndex):
     )
 
     if updateResult.modified_count > 0:
-        print(f"Entry {entryIndex} deleted successfully.")
+        print(f"Entry {password} deleted successfully.")
         return True
     else:
-        print(f"Failed to delete entry {entryIndex}.")
+        print(f"Failed to delete entry {password}.")
         return False
 
     # Use $unset to remove the entry
