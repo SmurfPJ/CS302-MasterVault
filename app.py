@@ -1024,6 +1024,8 @@ def passwordList():
 
     print("Decrypted Master Password: ", decrypt(findPost['masterPassword'], getEncryptKey(findPost)))
 
+    print("SessionID 0: ", sessionID)
+
     if 'username' in session:
         # Check if the account is locked or unlocked
         if findPost.get('accountLocked') == "Locked":
@@ -1146,78 +1148,85 @@ def lockedPasswordList():
 
 @app.route('/deleteEntry/<password>', methods=['POST'])
 def deleteEntry(password):
-    print("Delete function triggered with ID: ", password)  # To confirm if the function runs
+    sessionID = session.get('sessionID')
+
+    print("Delete function triggered with password:", password)
+    print("SessionID:", sessionID)
 
     if not sessionID:
-        raise ValueError("Session ID not found. Please log in.")
+        print("Session ID not found.")
+        return jsonify({"success": False, "error": "Session ID not found"}), 400
 
-    # Convert sessionID back to ObjectId
-    searchPasswords = userPasswords.find_one({"_id": ObjectId(sessionID)})
+    try:
+        # Ensure sessionID is a valid ObjectId
+        searchPasswords = userPasswords.find_one({"_id": ObjectId(sessionID)})
+        print("Document found:", searchPasswords)
 
-    if not searchPasswords:
-        print("No passwords found for the user.")
-        return False
+        # if not searchPasswords:
+        #     print("No passwords found for the user.")
+        #     return jsonify({"success": False, "error": "No passwords found"}), 404
 
-    # Define the fields to delete based on the entry index
-    fieldsToDelete = {
-        f"name{password}": "",
-        f"createdDate{password}": "",
-        f"website{password}": "",
-        f"username{password}": "",
-        f"email{password}": "",
-        f"accountNumber{password}": "",
-        f"pin{password}": "",
-        f"date{password}": "",
-        f"password{password}": "",
-        f"other{password}": "",
-        f"passwordLocked{password}": ""
-    }
-    print(fieldsToDelete)
+        # Step 1: Find the field name with the specified password
+        fieldNumber = None
+        for field, value in searchPasswords.items():
+            if value == password and field.startswith("name"):
+                fieldNumber = field[len("name"):]
+                print("fieldNumber = ", fieldNumber)
+                break
 
-    # Use $unset to delete the fields
-    updateResult = userPasswords.update_one(
-        {"_id": ObjectId(sessionID)},
-        {"$unset": fieldsToDelete}
-    )
+        
+        print("Final fieldNumber = ", fieldNumber)
 
-    if updateResult.modified_count > 0:
-        print(f"Entry {password} deleted successfully.")
-        return True
-    else:
-        print(f"Failed to delete entry {password}.")
-        return False
+        if fieldNumber is None:
+            print("No matching password found.")
+            return jsonify({"success": False, "error": "No matching password found"}), 404
 
-    # Use $unset to remove the entry
-    result = userPasswords.update_one(
-        {"_id": ObjectId(sessionID)},
-        {"$unset": fieldsToUnset}
-    )
+        # Step 2: Define the fields to delete using the field number
+        fieldsToDelete = {
+            f"name{fieldNumber}": "",
+            f"createdDate{fieldNumber}": "",
+            f"website{fieldNumber}": "",
+            f"username{fieldNumber}": "",
+            f"email{fieldNumber}": "",
+            f"accountNumber{fieldNumber}": "",
+            f"pin{fieldNumber}": "",
+            f"date{fieldNumber}": "",
+            f"password{fieldNumber}": "",
+            f"other{fieldNumber}": "",
+            f"passwordLocked{fieldNumber}": ""
+        }
+        print("Fields to delete:", fieldsToDelete)
 
+        # Step 3: Use $unset to delete the fields
+        updateResult = userPasswords.update_one(
+            {"_id": ObjectId(sessionID)},
+            {"$unset": fieldsToDelete}
+        )
 
-def remove_passwordList_entry(username, website, email, password):
-    updated_data = []
-    entry_found = False
+        if updateResult.modified_count > 0:
+            print(f"Entry with password '{password}' deleted successfully.")
+            return jsonify({"success": True, "message": "Entry deleted successfully"}), 200
+        else:
+            print(f"Failed to delete entry with password '{password}'.")
+            return jsonify({"success": False, "error": "Failed to delete entry"}), 500
 
-    with open('userData.csv', 'r', newline='') as file:
-        csvreader = csv.reader(file)
-        for row in csvreader:
-
-            if row and row[0] == username and row[1] == website and row[2] == email and row[3] == password:
-                entry_found = True
-                continue
-            updated_data.append(row)
-
-    if entry_found:
-        with open('userData.csv', 'w', newline='') as file:
-            csvwriter = csv.writer(file)
-            csvwriter.writerows(updated_data)
-
-    return entry_found
+    except Exception as e:
+        print("An error occurred:", str(e))
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 
 @app.route('/settings', methods=['GET'])
 def settings():
+    sessionID = session.get('sessionID')
+
+    if not sessionID:
+        return jsonify({'status': 'error', 'message': 'User not logged in'}), 401
+
+    findPost = userData.find_one({'_id': ObjectId(sessionID)})
+    print(findPost['accountLocked'])
+    print(findPost['lockTimestamp'])
+
     return render_template('settings.html')
 
 @app.route('/settingsFamily', methods=['GET'])
@@ -1407,6 +1416,8 @@ def lock_account():
 @app.route('/check_lock', methods=['GET'])
 def check_lock():
     sessionID = session.get('sessionID')
+
+    print("check_lock has been run")
 
     if not sessionID:
         return jsonify({'status': 'error', 'message': 'User not logged in'}), 401

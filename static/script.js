@@ -965,7 +965,7 @@ let globalTimerInterval = null;
             return;
         }
 
-        fetch(`/deleteEntry/2`, {
+        fetch(`/deleteEntry/${password}`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'}
         });
