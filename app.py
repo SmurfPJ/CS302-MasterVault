@@ -313,7 +313,7 @@ def handle_create_password():
 
 
 
-@app.route('/landingPage', methods=['GET'])
+@app.route('/', methods=['GET'])
 def landing_page():
     return render_template("landingPage.html")
 
@@ -810,7 +810,12 @@ def addPassword():
             }
 
             saveNewPassword(website, username, password, additional_fields)
-            return redirect(url_for('passwordList'))
+
+            # Redirect based on account type
+            if accountType == 'family':
+                return redirect(url_for('familyPasswordList'))
+            else:
+                return redirect(url_for('passwordList'))
 
 
     return render_template('addPassword.html', accountType=accountType)
@@ -1022,7 +1027,7 @@ def passwordList():
 
     findPost = userData.find_one({'_id': ObjectId(sessionID)})
 
-    print("Decrypted Master Password: ", decrypt(findPost['masterPassword'], getEncryptKey(findPost)))
+    # print("Decrypted Master Password: ", decrypt(findPost['masterPassword'], getEncryptKey(findPost)))
 
     print("SessionID 0: ", sessionID)
 
@@ -1150,39 +1155,30 @@ def lockedPasswordList():
 def deleteEntry(password):
     sessionID = session.get('sessionID')
 
-    # print("Delete function triggered with password:", password)
-    # print("SessionID:", sessionID)
-
     if not sessionID:
         print("Session ID not found.")
         return jsonify({"success": False, "error": "Session ID not found"}), 400
 
     try:
-        # Ensure sessionID is a valid ObjectId
-        findPost = userData.find_one({'_id': ObjectId(sessionID)})
+        # Find the user's passwords
         searchPasswords = userPasswords.find_one({"_id": ObjectId(sessionID)})
-        # print("Document found:", searchPasswords)
 
-        # if not searchPasswords:
-        #     print("No passwords found for the user.")
-        #     return jsonify({"success": False, "error": "No passwords found"}), 404
+        if not searchPasswords:
+            print("No passwords found for the user.")
+            return jsonify({"success": False, "error": "No passwords found"}), 404
 
-        # Step 1: Find the field name with the specified password
+        # Identify the field to delete
         fieldNumber = None
         for field, value in searchPasswords.items():
             if value == password and field.startswith("name"):
                 fieldNumber = field[len("name"):]
-                # print("fieldNumber = ", fieldNumber)
                 break
-
-        
-        # print("Final fieldNumber = ", fieldNumber)
 
         if fieldNumber is None:
             print("No matching password found.")
             return jsonify({"success": False, "error": "No matching password found"}), 404
 
-        # Step 2: Define the fields to delete using the field number
+        # Fields to delete
         fieldsToDelete = {
             f"name{fieldNumber}": "",
             f"createdDate{fieldNumber}": "",
@@ -1196,25 +1192,20 @@ def deleteEntry(password):
             f"other{fieldNumber}": "",
             f"passwordLocked{fieldNumber}": ""
         }
-        # print("Fields to delete:", fieldsToDelete)
 
-        # Step 3: Use $unset to delete the fields
+        # Attempt to delete the fields
         updateResult = userPasswords.update_one(
             {"_id": ObjectId(sessionID)},
             {"$unset": fieldsToDelete}
         )
 
-        if updateResult.modified_count > 0:
-            print(f"Entry with password '{password}' deleted successfully.")
-            # return jsonify({"success": True, "message": "Entry deleted successfully"}), 200
-            account_type = findPost.get('accountType', 'personal')
-            if account_type == 'family':
-                return redirect(url_for('familyPasswordList'))
-            else:
-                return redirect(url_for('passwordList'))
-        else:
-            print(f"Failed to delete entry with password '{password}'.")
-            return jsonify({"success": False, "error": "Failed to delete entry"}), 500
+        # Check if any fields were actually modified
+        if updateResult.matched_count == 0:
+            print("No matching document found for the session.")
+            return jsonify({"success": False, "error": "No matching document found."}), 404
+
+        print(f"Entry with password '{password}' deleted successfully.")
+        return jsonify({"success": True, "message": "Entry deleted successfully"}), 200
 
     except Exception as e:
         print("An error occurred:", str(e))
