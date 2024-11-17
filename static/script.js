@@ -990,34 +990,43 @@ let globalTimerInterval = null;
 
 
 
-function deleteEntry(password) {
-    console.log("Password identifier received:", password);
+    function deleteEntry(password) {
+        console.log("Password identifier received:", password);
 
-    if (!password) {
-        alert("Password identifier is missing!");
-        return;
-    }
+        if (!password) {
+            alert("Password identifier is missing!");
+            return;
+        }
 
-    fetch(`/deleteEntry/${password}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        }
-    })
-    .then(response => {
-        console.log("Server responded with status:", response.status);
-        return response.json();
-    })
-    .then(data => {
-        if (data.success) {
-            alert(data.message);
-            location.reload();
-        } else {
-            alert("Failed to delete entry.");
-        }
-    })
-    .catch(error => console.error('Fetch error:', error));  // Logs any network issues
-} 
+        fetch(`/deleteEntry/${password}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'}
+        });
+    } 
+
+
+    // function deleteEntry(website, email, password) {
+    //     fetch('/deleteEntry', {
+    //         method: 'POST',
+    //         headers: {
+    //             'Content-Type': 'application/json'
+    //         },
+    //         body: JSON.stringify({ website: website, email: email, password: password })
+    //     })
+    //     .then(response => response.json())
+    //     .then(data => {
+    //         if (data.status === 'success') {
+    //             alert('Password entry deleted successfully.');
+    //             location.reload(); // Reload the page to refresh the password list
+    //         } else {
+    //             alert(data.message);
+    //         }
+    //     })
+    //     .catch(error => {
+    //         console.error('Error:', error);
+    //         alert('Failed to delete password entry.');
+    //     });
+    // }
 
 
     // ----------------------------

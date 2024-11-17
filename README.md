@@ -1,4 +1,4 @@
-# CS302-MasterVault
+# 301.3-MasterVault
 MasterVault is a Flask-based password management application designed for secure storage and management of passwords. It features functionalities like user authentication, 
 password generation, encryption, and two-factor authentication (2FA).
 
