@@ -478,14 +478,14 @@ def animalIDVerification():
         userData.update_one({"_id": ObjectId(sessionID)}, {"$set": {"failedAttempt": updateNumber}})
         if updateNumber == 2:
             firstFailedLogin(findPost['email'])
-        elif updateNumber == 5:
+        elif updateNumber >= 5:
             secondFailedLogin(findPost['email'])
 
             lock_timestamp = datetime.now() + timedelta(minutes=int(60))
 
             update = {
                 "$set": {
-                    'lockDuration': 60,
+                    'lockDuration': 999,
                     'accountLocked': 'Locked',
                     'lockTimestamp': lock_timestamp
                 }
@@ -497,9 +497,9 @@ def animalIDVerification():
                 session['lock_state'] = 'locked'
                 session['unlock_time'] = lock_timestamp
 
-                return jsonify({'status': 'success', 'message': 'Account locked'})
-            else:
-                return jsonify({'status': 'error', 'message': 'Failed to lock account'})
+            #     return jsonify({'status': 'success', 'message': 'Account locked'})
+            # else:
+            #     return jsonify({'status': 'error', 'message': 'Failed to lock account'})
 
     return render_template('animal_IDLogin.html', selected_animal=selected_animal)
 
@@ -571,9 +571,13 @@ def secondFailedLogin(email):
     msg = Message("Numerous Failed Login Attempts!",
                     sender='nickidummyacc@gmail.com',
                     recipients=[email])
+    print("User email is: ", email)
+    resetPasswordLink = url_for('resetPasswordLocked', emailAddress=email, _external=True)
+
+
     msg.body = (f'Hello, we are emailing you to notify you that there has been numerous failed login attempts to the MasterVault account made with this email address.'
                 f'\nIn response to this suspicious activity, we have locked the account linked with this email address.'
-                f'\nIf these failed attempts are indeed yourself, we appologise for the inconvenience.')
+                f'\nIf these failed attempts are indeed yourself, we appologise for the inconvenience.{resetPasswordLink}')
     mail.send(msg)
 
 
@@ -735,7 +739,7 @@ def master_password():
         print("Before lockPost is assigned a variable")
 
         lockedPost = findPost["accountLocked"]
-        print(lockedPost)
+        # print(lockedPost)
         if lockedPost == "Locked":
             flash(
                 'Your account is currently locked. You cannot set or reset the master password while the account is locked.',
@@ -992,12 +996,12 @@ def resetPassword():
     # Check if the account is locked
     lockedPost = findPost['accountLocked']
 
-    if lockedPost == "Locked":
-        flash(
-            'Your account is currently locked. You cannot reset the login password while the account is locked.',
-            'error'
-        )
-        return redirect(url_for('settings'))
+    # if lockedPost == "Locked":
+    #     flash(
+    #         'Your account is currently locked. You cannot reset the login password while the account is locked.',
+    #         'error'
+    #     )
+    #     return redirect(url_for('settings'))
 
     if request.method == 'POST':
         newPassword = request.form['newPassword']
@@ -1007,6 +1011,48 @@ def resetPassword():
             # Encrypt and update the new password in the database
             # encrypted_password = encrypt(newPassword)
             userData.update_one({"_id": ObjectId(sessionID)}, {"$set": {"loginPassword": newPassword}})
+
+            flash('Password reset successfully!', 'success')
+            return redirect(url_for('login'))
+        else:
+            flash('Passwords do not match. Please try again.', 'error')
+
+    return render_template('resetPassword.html')
+
+
+
+@app.route('/resetPasswordLocked/<emailAddress>', methods=['GET', 'POST'])
+def resetPasswordLocked(emailAddress):
+
+    findPost = userData.find_one({"email": emailAddress})
+
+    if not findPost:
+        flash('User not found.', 'error')
+        return redirect(url_for('login'))
+
+    print("Found findPost")
+
+    if request.method == 'POST':
+        newPassword = request.form['newPassword']
+        confirmNewPassword = request.form['confirmNewPassword']
+
+        print("New Password: ", newPassword, "\nConfirmed Password: ", confirmNewPassword)
+
+        if newPassword == confirmNewPassword:
+
+            update = {
+                "$set": {
+                    'loginPassword': newPassword,
+                    'lockDuration': 0,
+                    'accountLocked': 'Unlocked',
+                    'lockTimestamp': datetime.now(),
+                    'failedAttempt': 0
+                }
+            }
+
+            print("Update set: ", update)
+
+            userData.update_one({'_id': emailAddress}, update)
 
             flash('Password reset successfully!', 'success')
             return redirect(url_for('login'))
