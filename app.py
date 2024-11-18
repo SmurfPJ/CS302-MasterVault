@@ -539,12 +539,12 @@ def send_verification_email(email):
     msg.body = 'Hello, your account has been registered successfully! Thank you for using MasterVault. (This is a test program for a college project)'
     mail.send(msg)
 
-def send_family_account_request(email, current_user):
+def send_family_account_request(email, parentID, current_user):
     msg = Message("Family Account Request",
                   sender='nickidummyacc@gmail.com',
                   recipients=[email])
     # URL for the family member to register
-    registration_link = url_for('register_family', _external=True)
+    registration_link = url_for('register_family', familyID=parentID, _external=True)
     msg.body = (f'Hello,\n\n{current_user} has requested to add you to their MasterVault family account.\n'
                 f'Please click the link below to register:\n\n{registration_link}\n\n'
                 f'Thank you for using MasterVault. (This is a test program for a college project)')
@@ -556,17 +556,18 @@ def firstFailedLogin(email):
                   sender='nickidummyacc@gmail.com',
                   recipients=[email])
     msg.body = (f'Hello, we are emailing you to notify you that there has been three failed login attempts to the MasterVault account made with this email address.'
-                f'\nIf this is not you, we reccomend doing the following:'
-                f'\nWow! look at these good instructions :o')
+                f'\nIf this account is not yours, please ignore these emails.')
     mail.send(msg)
 
 def secondFailedLogin(email):
     msg = Message("Numerous Failed Login Attempts!",
                     sender='nickidummyacc@gmail.com',
                     recipients=[email])
+    print("User email is: ", email)
+    resetPasswordLink = url_for('resetPasswordLocked', emailAddress=email, _external=True)
     msg.body = (f'Hello, we are emailing you to notify you that there has been numerous failed login attempts to the MasterVault account made with this email address.'
                 f'\nIn response to this suspicious activity, we have locked the account linked with this email address.'
-                f'\nIf these failed attempts are indeed yourself, we appologise for the inconvenience.')
+                f'\nIf these failed attempts are indeed yourself, we appologise for the inconvenience.{resetPasswordLink}')
     mail.send(msg)
 
 
@@ -645,8 +646,8 @@ def register():
 
 
  
-@app.route('/register_family', methods=['GET', 'POST'])
-def register_family():
+@app.route('/register_family/<familyID>', methods=['GET', 'POST'])
+def register_family(familyID):
     form = FamilyRegistrationForm()
 
     if form.validate_on_submit():
@@ -659,7 +660,6 @@ def register_family():
         dobTime = datetime(year=dob.year, month=dob.month, day=dob.day, hour=0, minute=0, second=0)
 
         # Retrieve the familyID from the session (use default 0 if not found)
-        familyID = session.get('familyID', 0)
 
         # Prepare the user data post
         post = {
@@ -691,6 +691,7 @@ def register_family():
 
             childName = f'childName{i}'
             childNumber = f'childID{i}'
+            print("ChildNum: ", childNumber)
             
             if childNumber not in familyPost:
 
@@ -980,12 +981,12 @@ def resetPassword():
     # Check if the account is locked
     lockedPost = findPost['accountLocked']
 
-    if lockedPost == "Locked":
-        flash(
-            'Your account is currently locked. You cannot reset the login password while the account is locked.',
-            'error'
-        )
-        return redirect(url_for('settings'))
+    # if lockedPost == "Locked":
+    #     flash(
+    #         'Your account is currently locked. You cannot reset the login password while the account is locked.',
+    #         'error'
+    #     )
+    #     return redirect(url_for('settings'))
 
     if request.method == 'POST':
         newPassword = request.form['newPassword']
@@ -995,6 +996,48 @@ def resetPassword():
             # Encrypt and update the new password in the database
             encrypted_password = newPassword
             userData.update_one({"_id": ObjectId(sessionID)}, {"$set": {"loginPassword": encrypted_password}})
+
+            flash('Password reset successfully!', 'success')
+            return redirect(url_for('login'))
+        else:
+            flash('Passwords do not match. Please try again.', 'error')
+
+    return render_template('resetPassword.html')
+
+
+
+@app.route('/resetPasswordLocked/<emailAddress>', methods=['GET', 'POST'])
+def resetPasswordLocked(emailAddress):
+
+    findPost = userData.find_one({"email": emailAddress})
+
+    if not findPost:
+        flash('User not found.', 'error')
+        return redirect(url_for('login'))
+
+    print("Found findPost")
+
+    if request.method == 'POST':
+        newPassword = request.form['newPassword']
+        confirmNewPassword = request.form['confirmNewPassword']
+
+        print("New Password: ", newPassword, "\nConfirmed Password: ", confirmNewPassword)
+
+        if newPassword == confirmNewPassword:
+
+            update = {
+                "$set": {
+                    'loginPassword': newPassword,
+                    'lockDuration': 0,
+                    'accountLocked': 'Unlocked',
+                    'lockTimestamp': datetime.now(),
+                    'failedAttempt': 0
+                }
+            }
+
+            print("Update set: ", update)
+
+            userData.update_one({'_id': emailAddress}, update)
 
             flash('Password reset successfully!', 'success')
             return redirect(url_for('login'))
@@ -1236,12 +1279,15 @@ def add_family_account():
     # Assume the current user's email is stored in session
     current_user_email = session.get('email')
     current_user = userData.find_one({"email": current_user_email})
+    sessionID = session.get('sessionID')
+    familyPost = familyData.find_one({"_id": ObjectId(sessionID)})
+    parentID = familyPost["familyID"]
 
     if current_user:
         current_username = current_user["username"]
 
         # Send the email to the family member
-        send_family_account_request(family_email, current_username)
+        send_family_account_request(family_email, parentID, current_username)
 
         return jsonify({"success": True, "message": "Request sent successfully"})
     else:
