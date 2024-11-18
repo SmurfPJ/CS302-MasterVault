@@ -678,13 +678,14 @@ def register_family(familyID):
             "lockTimestamp": timeNow
         }
 
-        print(familyID)
+        print("FamilyID: ", familyID)
 
         userData.insert_one(post)
 
         findPost = userData.find_one(post)
         session['sessionID'] = str(findPost['_id'])
-        familyPost = familyData.find_one({"familyID": familyID})
+        familyPost = familyData.find_one({"_id": ObjectId(familyID)})
+        print("Family Document:", familyPost)
 
         i = 1
         while True:
@@ -695,7 +696,7 @@ def register_family(familyID):
             
             if childNumber not in familyPost:
 
-                familyData.update_one({"familyID": familyID}, {"$set": {childName: findPost['username'], childNumber: findPost['_id']}})
+                familyData.update_one({"_id": ObjectId(familyID)}, {"$set": {childName: findPost['username'], childNumber: findPost['_id']}})
                 break
 
             i += 1
@@ -706,7 +707,7 @@ def register_family(familyID):
         # Redirect to set up animal ID
         return redirect(url_for('animal_id'))
 
-    return render_template('registrationAddFamily.html', form=form)
+    return render_template('registrationAddFamily.html', form=form, familyID=familyID)
 
 
 @app.route('/master_password', methods=['GET', 'POST'])
@@ -1289,8 +1290,10 @@ def add_family_account():
     current_user_email = session.get('email')
     current_user = userData.find_one({"email": current_user_email})
     sessionID = session.get('sessionID')
-    familyPost = familyData.find_one({"_id": ObjectId(sessionID)})
-    parentID = familyPost["familyID"]
+    familyPost = userData.find_one({"_id": ObjectId(sessionID)})
+    parentID = familyPost["_id"]
+    print("SessionID: ", sessionID)
+    print("ParentID: ", parentID)
 
     if current_user:
         current_username = current_user["username"]
