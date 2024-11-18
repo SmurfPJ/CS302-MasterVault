@@ -1136,53 +1136,78 @@ def lockedPasswordList():
 #     return jsonify({'status': 'error', 'message': 'Entry not found'}), 404
 
 @app.route('/deleteEntry/<password>', methods=['POST'])
-def deleteEntry(entryIndex):
-    print("Delete function triggered with ID: ", entryIndex)  # To confirm if the function runs
+def deleteEntry(password):
+    sessionID = session.get('sessionID')
+
+    # print("Delete function triggered with password:", password)
+    # print("SessionID:", sessionID)
 
     if not sessionID:
-        raise ValueError("Session ID not found. Please log in.")
+        print("Session ID not found.")
+        return jsonify({"success": False, "error": "Session ID not found"}), 400
 
-    # Convert sessionID back to ObjectId
-    searchPasswords = userPasswords.find_one({"_id": ObjectId(sessionID)})
+    try:
+        # Ensure sessionID is a valid ObjectId
+        findPost = userData.find_one({'_id': ObjectId(sessionID)})
+        searchPasswords = userPasswords.find_one({"_id": ObjectId(sessionID)})
+        # print("Document found:", searchPasswords)
 
-    if not searchPasswords:
-        print("No passwords found for the user.")
-        return False
+        # if not searchPasswords:
+        #     print("No passwords found for the user.")
+        #     return jsonify({"success": False, "error": "No passwords found"}), 404
 
-    # Define the fields to delete based on the entry index
-    fieldsToDelete = {
-        f"name{entryIndex}": "",
-        f"createdDate{entryIndex}": "",
-        f"website{entryIndex}": "",
-        f"username{entryIndex}": "",
-        f"email{entryIndex}": "",
-        f"accountNumber{entryIndex}": "",
-        f"pin{entryIndex}": "",
-        f"date{entryIndex}": "",
-        f"password{entryIndex}": "",
-        f"other{entryIndex}": "",
-        f"passwordLocked{entryIndex}": ""
-    }
-    print(fieldsToDelete)
+        # Step 1: Find the field name with the specified password
+        fieldNumber = None
+        for field, value in searchPasswords.items():
+            if value == password and field.startswith("name"):
+                fieldNumber = field[len("name"):]
+                # print("fieldNumber = ", fieldNumber)
+                break
 
-    # Use $unset to delete the fields
-    updateResult = userPasswords.update_one(
-        {"_id": ObjectId(sessionID)},
-        {"$unset": fieldsToDelete}
-    )
+        
+        # print("Final fieldNumber = ", fieldNumber)
 
-    if updateResult.modified_count > 0:
-        print(f"Entry {entryIndex} deleted successfully.")
-        return True
-    else:
-        print(f"Failed to delete entry {entryIndex}.")
-        return False
+        if fieldNumber is None:
+            print("No matching password found.")
+            return jsonify({"success": False, "error": "No matching password found"}), 404
 
-    # Use $unset to remove the entry
-    result = userPasswords.update_one(
-        {"_id": ObjectId(sessionID)},
-        {"$unset": fieldsToUnset}
-    )
+        # Step 2: Define the fields to delete using the field number
+        fieldsToDelete = {
+            f"name{fieldNumber}": "",
+            f"createdDate{fieldNumber}": "",
+            f"website{fieldNumber}": "",
+            f"username{fieldNumber}": "",
+            f"email{fieldNumber}": "",
+            f"accountNumber{fieldNumber}": "",
+            f"pin{fieldNumber}": "",
+            f"date{fieldNumber}": "",
+            f"password{fieldNumber}": "",
+            f"other{fieldNumber}": "",
+            f"passwordLocked{fieldNumber}": ""
+        }
+        # print("Fields to delete:", fieldsToDelete)
+
+        # Step 3: Use $unset to delete the fields
+        updateResult = userPasswords.update_one(
+            {"_id": ObjectId(sessionID)},
+            {"$unset": fieldsToDelete}
+        )
+
+        if updateResult.modified_count > 0:
+            print(f"Entry with password '{password}' deleted successfully.")
+            # return jsonify({"success": True, "message": "Entry deleted successfully"}), 200
+            account_type = findPost.get('accountType', 'personal')
+            if account_type == 'family':
+                return redirect(url_for('familyPasswordList'))
+            else:
+                return redirect(url_for('passwordList'))
+        else:
+            print(f"Failed to delete entry with password '{password}'.")
+            return jsonify({"success": False, "error": "Failed to delete entry"}), 500
+
+    except Exception as e:
+        print("An error occurred:", str(e))
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 
