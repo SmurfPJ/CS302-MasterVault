@@ -1256,6 +1256,15 @@ def deleteEntry(password):
 
 @app.route('/settings', methods=['GET'])
 def settings():
+    sessionID = session.get('sessionID')
+
+    if not sessionID:
+        return jsonify({'status': 'error', 'message': 'User not logged in'}), 401
+
+    findPost = userData.find_one({'_id': ObjectId(sessionID)})
+    print(findPost['accountLocked'])
+    print(findPost['lockTimestamp'])
+
     return render_template('settings.html')
 
 @app.route('/settingsFamily', methods=['GET'])
@@ -1448,6 +1457,8 @@ def lock_account():
 @app.route('/check_lock', methods=['GET'])
 def check_lock():
     sessionID = session.get('sessionID')
+
+    print("check_lock has been run")
 
     if not sessionID:
         return jsonify({'status': 'error', 'message': 'User not logged in'}), 401
