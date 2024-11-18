@@ -369,18 +369,18 @@ def login_extension():
             return jsonify({"status": "error", "message": "Email and password are required"}), 400
 
         email = data.get('email')
-        password = decrypt(data.get('password'))
+        password = data.get('password')
 
         # Find the user in the database
         findPost = userData.find_one({"email": email})
 
         if findPost and findPost["email"] == email:
-            stored_password = findPost["loginPassword"]
+            stored_password = decrypt(findPost["loginPassword"])
 
             # Verify the provided password against the stored plain text password
             if password == stored_password:
                 # If the password matches, set session or return a successful login response
-                username = findPost["username"]
+                username = decrypt(findPost["username"])
                 setSessionID(findPost['_id'])
                 session['username'] = username
                 session['email'] = email
@@ -453,10 +453,10 @@ def animalIDVerification():
         selected_animal = random.choice(available_animals)
 
     if request.method == 'POST':
-        password = decrypt(request.form.get('password'))
+        password = request.form.get('password')
         security_check = request.form.get('securityCheck')
 
-        if security_check and password == findPost['loginPassword']:
+        if security_check and password == decrypt(findPost['loginPassword']):
             userData.update_one({"_id": ObjectId(sessionID)}, {"$set": {"failedAttempt": 0}})
             print("Failed Attempts: ", findPost['failedAttempt'])
             if findPost['masterPassword'] is None:
@@ -839,6 +839,7 @@ def saveNewPassword(website, username, password, additional_fields):
         newPasswordLocked = f"passwordLocked{i}"
 
         # Check if the entry doesn't exist yet
+        
         if newWebsite not in searchPasswords:
             post = {
                 newName: additional_fields.get('name'),
@@ -1182,27 +1183,6 @@ def deleteEntry(entryIndex):
         {"_id": ObjectId(sessionID)},
         {"$unset": fieldsToUnset}
     )
-
-
-def remove_passwordList_entry(username, website, email, password):
-    updated_data = []
-    entry_found = False
-
-    with open('userData.csv', 'r', newline='') as file:
-        csvreader = csv.reader(file)
-        for row in csvreader:
-
-            if row and row[0] == username and row[1] == website and row[2] == email and row[3] == password:
-                entry_found = True
-                continue
-            updated_data.append(row)
-
-    if entry_found:
-        with open('userData.csv', 'w', newline='') as file:
-            csvwriter = csv.writer(file)
-            csvwriter.writerows(updated_data)
-
-    return entry_found
 
 
 

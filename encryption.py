@@ -20,7 +20,7 @@ def unpad(data):
     return data[:-pad_len]
 
 def derive_key(salt):
-    passphrase = "This is a test Key"
+    passphrase = "mfyrrjSuP97KXU9vxtc7M2FdDbfqU9LZgzVHFPsxGqYZgJi4jgB8xURi56SV6AlE"
     return PBKDF2(passphrase, salt, dkLen=KEY_SIZE, count=ITERATIONS)
 
 
