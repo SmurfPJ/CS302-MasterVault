@@ -329,7 +329,7 @@ def login():
                 if email == postEmail:
                     # Set session ID and user details
                     session['sessionID'] = str(findPost['_id'])
-                    session['username'] = decrypt(findPost["username"])
+                    session['username'] = findPost["username"]
                     session['email'] = email
 
                     # Set account type in the session
@@ -375,12 +375,12 @@ def login_extension():
         findPost = userData.find_one({"email": email})
 
         if findPost and findPost["email"] == email:
-            stored_password = decrypt(findPost["loginPassword"])
+            stored_password = findPost["loginPassword"]
 
             # Verify the provided password against the stored plain text password
             if password == stored_password:
                 # If the password matches, set session or return a successful login response
-                username = decrypt(findPost["username"])
+                username = findPost["username"]
                 setSessionID(findPost['_id'])
                 session['username'] = username
                 session['email'] = email
@@ -456,7 +456,7 @@ def animalIDVerification():
         password = request.form.get('password')
         security_check = request.form.get('securityCheck')
 
-        if security_check and password == decrypt(findPost['loginPassword']):
+        if security_check and password == findPost['loginPassword']:
             userData.update_one({"_id": ObjectId(sessionID)}, {"$set": {"failedAttempt": 0}})
             print("Failed Attempts: ", findPost['failedAttempt'])
             if findPost['masterPassword'] is None:
@@ -507,7 +507,7 @@ def animal_id():
         return redirect(url_for('login'))
 
     if form.validate_on_submit():
-        selected_animal = encrypt(form.animal.data)
+        selected_animal = form.animal.data
         userData.update_one({"_id": ObjectId(sessionID)}, {"$set": {"animalID": selected_animal}})
 
         return redirect(url_for('login'))
@@ -583,10 +583,10 @@ def register():
 
         # Prepare the user data post
         post = {
-            "username": encrypt(cform.username.data),
+            "username": cform.username.data,
             "email": cform.email.data,
             "DOB": dobTime,
-            "loginPassword": encrypt(cform.password.data),
+            "loginPassword": cform.password.data,
             "animalID": None,
             "accountType": cform.account_type.data,
             "masterPassword": None,
@@ -740,7 +740,7 @@ def master_password():
 
         if master_password == request.form['confirmMaster_password']:
             # Encrypt and update the master password
-            encrypted_password = encrypt(master_password)
+            encrypted_password = master_password
             userData.update_one({"_id": ObjectId(sessionID)}, {"$set": {"masterPassword": encrypted_password}})
 
             # Check if the user has a family account
@@ -993,7 +993,7 @@ def resetPassword():
 
         if newPassword == confirmNewPassword:
             # Encrypt and update the new password in the database
-            encrypted_password = encrypt(newPassword)
+            encrypted_password = newPassword
             userData.update_one({"_id": ObjectId(sessionID)}, {"$set": {"loginPassword": encrypted_password}})
 
             flash('Password reset successfully!', 'success')
