@@ -19,25 +19,25 @@ def unpad(data):
     pad_len = data[-1]
     return data[:-pad_len]
 
-def derive_key(salt, passphrase):
-    # passphrase = "This is a test Key"
+def derive_key(salt):
+    passphrase = "This is a test Key"
     return PBKDF2(passphrase, salt, dkLen=KEY_SIZE, count=ITERATIONS)
 
 
-def encrypt(plaintext, passphrase):
+def encrypt(plaintext):
     salt = get_random_bytes(SALT_SIZE)
-    key = derive_key(salt, passphrase)
+    key = derive_key(salt)
     iv = get_random_bytes(16)
     cipher = AES.new(key, AES.MODE_CBC, iv)
     ciphertext = cipher.encrypt(pad(plaintext.encode()))
     return base64.b64encode(salt + iv + ciphertext).decode('utf-8')
 
-def decrypt(ciphertext, passphrase):
+def decrypt(ciphertext):
     ciphertext = base64.b64decode(ciphertext)
     salt = ciphertext[:SALT_SIZE]
     iv = ciphertext[SALT_SIZE:SALT_SIZE+16]
     encrypted_data = ciphertext[SALT_SIZE+16:]
-    key = derive_key(salt, passphrase)
+    key = derive_key(salt)
     cipher = AES.new(key, AES.MODE_CBC, iv)
     plaintext = unpad(cipher.decrypt(encrypted_data))
     return plaintext.decode('utf-8')
@@ -61,7 +61,7 @@ def decrypt(ciphertext, passphrase):
 
     # userPasswords.update_one({"_id": sessionID}, { "$unset": { "username1": "" }})
 
-    # print(userPasswords.find_one({"_id": ObjectId('6729665217c3489ff7992026')}))
+    print(userPasswords.find_one({"_id": ObjectId('6729665217c3489ff7992026')}))
 
     # plainText = input("Password: ")
 
