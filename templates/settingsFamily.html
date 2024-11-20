@@ -47,11 +47,17 @@
                 <button id="addFamilyAccountBtn" class="btn btn-primary" onclick="addFamilyAccount()">Send Request</button>
             </li>
             <li class="mb-4">
-                <div class="d-flex justify-content-between align-items-center">
-                    <span>Remove Family Member</span>
-                    <button type="button" id="removeFamilyMemberBtn" class="btn btn-secondary btn-sm" onclick="removeFamilyMember()">REMOVE</button>
-                </div>
-            </li>
+    <label for="deleteChildAccountSelect" class="form-label">Delete Family Account</label>
+    <div class="input-group" style="max-width: 300px;">
+        <select id="deleteChildAccountSelect" name="deleteChildAccountSelect" class="form-select form-select-sm">
+            <option selected disabled>Select Child Account</option>
+            {% for account in family_accounts %}
+                <option value="{{ account[0] }}">{{ account[1] }}</option>
+            {% endfor %}
+        </select>
+        <button type="button" class="btn btn-danger btn-sm" onclick="deleteChildAccount()">DELETE</button>
+    </div>
+</li>
         </ul>
     </div>
 

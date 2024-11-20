@@ -573,7 +573,7 @@ def secondFailedLogin(email):
                     recipients=[email])
     msg.body = (f'Hello, we are emailing you to notify you that there has been numerous failed login attempts to the MasterVault account made with this email address.'
                 f'\nIn response to this suspicious activity, we have locked the account linked with this email address.'
-                f'\nIf these failed attempts are indeed yourself, we appologise for the inconvenience.')
+                f'\nIf these failed attempts are indeed yourself, we apologise for the inconvenience.')
     mail.send(msg)
 
 
